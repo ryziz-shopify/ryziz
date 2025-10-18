@@ -98,19 +98,15 @@ export async function devCommand() {
       path.join(ryzizDir, 'functions/index.js')
     );
 
-    // Copy functions/package.json with npm link approach
+    // Copy functions/package.json
     const functionsPackageTemplate = await fs.readFile(
       path.join(templatesDir, 'functions/package.json'),
       'utf-8'
     );
-    // Use file: protocol for local development
-    const functionsPackage = functionsPackageTemplate.replace(
-      'RYZIZ_VERSION_PLACEHOLDER',
-      'file:../../../ryziz'
-    );
+    // Package.json already has github URL configured
     await fs.writeFile(
       path.join(ryzizDir, 'functions/package.json'),
-      functionsPackage
+      functionsPackageTemplate
     );
 
     spinner.succeed('Firebase configuration generated');
@@ -144,20 +140,6 @@ export async function devCommand() {
 
     // Step 3: Install function dependencies
     spinner.start('Installing function dependencies...');
-
-    // First, check if ryziz is linked globally
-    try {
-      const checkLink = spawn('npm', ['list', '-g', 'ryziz'], {
-        stdio: 'pipe'
-      });
-
-      await new Promise((resolve) => {
-        checkLink.on('close', () => resolve());
-      });
-    } catch (e) {
-      // ryziz not linked, warn user
-      console.log(chalk.yellow('\n⚠️  Ryziz not globally linked. Run: npm link in ryziz directory\n'));
-    }
 
     const npmInstall = spawn('npm', ['install'], {
       cwd: path.join(ryzizDir, 'functions'),

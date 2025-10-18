@@ -6,7 +6,7 @@
 - [x] All CLI commands (init, dev, deploy)
 - [x] Template-based architecture (project/ + ryziz/)
 - [x] Zero hardcoded templates
-- [x] npm link working for local development
+- [x] GitHub-based distribution (no npm publish needed)
 - [x] Clean folder structure
 - [x] Bug fixes from v3
 
@@ -15,20 +15,15 @@
 ### 1. Test Full Development Workflow
 
 ```bash
-# From ryziz directory
-cd /home/droid/ryziz-shopify/ryziz
-npm link
-
 # Create test project
 cd /home/droid/ryziz-shopify
 mkdir test-app-v001 && cd test-app-v001
 
-# Initialize project
-ryziz init
+# Initialize project from GitHub
+npx github:ryziz-shopify/ryziz init
 
-# Manual install (since not published yet)
-npm install react react-dom
-npm link ryziz
+# Install dependencies (includes ryziz from GitHub)
+npm install
 
 # Configure Shopify credentials
 # Edit .env.development with real Shopify app credentials:
@@ -47,27 +42,14 @@ npm run dev
 # - Check Firestore emulator at http://localhost:4000
 ```
 
-### 2. Fix Init Command (Optional Enhancement)
+### 2. Installation Method
 
-The `init.js` currently fails at `npm install` because ryziz isn't published. Options:
+Ryziz now installs directly from GitHub repository:
 
-**Option A: Skip npm install in init**
-```javascript
-// In src/commands/init.js, comment out lines 67-70:
-// spinner.start('Installing dependencies (this may take a minute)...');
-// execSync('npm install', { stdio: 'ignore' });
-// spinner.succeed('Dependencies installed');
-```
-
-**Option B: Add better error handling**
-```javascript
-try {
-  execSync('npm install', { stdio: 'ignore' });
-  spinner.succeed('Dependencies installed');
-} catch (error) {
-  spinner.warn('Skipping npm install (run manually: npm install react react-dom && npm link ryziz)');
-}
-```
+- Package references use `github:ryziz-shopify/ryziz`
+- No npm publishing required
+- Users run `npx github:ryziz-shopify/ryziz init` to create new projects
+- Dependencies automatically install from GitHub via `npm install`
 
 ### 3. Test Deployment (When Ready)
 
@@ -119,23 +101,20 @@ watcher.on('all', async (event, filePath) => {
 - Better Firebase emulator error handling
 - Helpful tips when things fail
 
-### Priority 3: Publish to npm
+### Priority 3: GitHub Distribution
+
+Ryziz uses GitHub for distribution instead of npm:
 
 ```bash
-# 1. Create npm account (if needed)
-npm adduser
+# Users install directly from GitHub
+mkdir my-shopify-app && cd my-shopify-app
+npx github:ryziz-shopify/ryziz init
+npm install
 
-# 2. Update package.json if needed
-# (already set to v0.0.1)
-
-# 3. Publish
-cd /home/droid/ryziz-shopify/ryziz
-npm publish
-
-# 4. Test installation
-mkdir test-published && cd test-published
-npm install -g ryziz@0.0.1
-ryziz init
+# Benefits:
+# - No npm publishing needed
+# - Always up-to-date from repository
+# - Simpler distribution workflow
 ```
 
 ### Priority 4: Add .gitignore to ryziz package
@@ -214,10 +193,7 @@ EOF
 
 ## 🐛 Known Issues
 
-1. **npm install in init fails** - ryziz not published yet
-   - Workaround: Manual `npm install react react-dom && npm link ryziz`
-
-2. **No file watching in dev** - Changes require restart
+1. **No file watching in dev** - Changes require restart
    - Workaround: Restart `npm run dev` after changes
    - Fix: Add in v0.0.2
 
@@ -235,7 +211,7 @@ If you encounter issues:
 1. Check `.env.development` has valid Shopify credentials
 2. Verify Firebase emulators are running (http://localhost:4000)
 3. Check console logs for error messages
-4. Verify `npm link ryziz` was successful
+4. Ensure `npm install` completed successfully
 
 ## 🎉 Success Criteria for v0.0.1
 
@@ -253,16 +229,15 @@ If you encounter issues:
 
 ```bash
 # Quick start checklist:
-1. cd /home/droid/ryziz-shopify/ryziz && npm link ✅
-2. mkdir my-test-app && cd my-test-app
-3. ryziz init ✅
-4. npm install react react-dom && npm link ryziz ✅
-5. Edit .env.development with Shopify credentials
-6. npm run dev (requires firebase-tools installed)
-7. Visit http://localhost:5000
-8. Test OAuth flow
-9. Verify /app protected route
-10. Check session storage in Firestore emulator
+1. mkdir my-test-app && cd my-test-app
+2. npx github:ryziz-shopify/ryziz init
+3. npm install
+4. Edit .env.development with Shopify credentials
+5. npm run dev (requires firebase-tools installed)
+6. Visit http://localhost:5000
+7. Test OAuth flow
+8. Verify /app protected route
+9. Check session storage in Firestore emulator
 ```
 
 **Status:** Ready for testing! 🚀

@@ -7,7 +7,7 @@
     "deploy": "ryziz deploy"
   },
   "dependencies": {
-    "ryziz": "^0.0.1",
+    "ryziz": "github:ryziz-shopify/ryziz",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }

@@ -16,12 +16,14 @@ Build Shopify apps with Server-Side Rendering, file-based routing, and zero conf
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g ryziz@0.0.1
-
 # Create new project
 mkdir my-shopify-app && cd my-shopify-app
-ryziz init
+
+# Initialize project (downloads from GitHub)
+npx github:ryziz-shopify/ryziz init
+
+# Install dependencies
+npm install
 
 # Configure credentials
 # Edit .env.development with your Shopify app credentials
@@ -132,15 +134,19 @@ NODE_ENV=development
 
 ## Local Development
 
-Ryziz uses `npm link` for local development:
+Install directly from GitHub repository:
 
 ```bash
-# In ryziz package directory
-npm link
+# Create new project
+mkdir my-shopify-app && cd my-shopify-app
 
-# In your project directory
-ryziz init
+# Initialize from GitHub
+npx github:ryziz-shopify/ryziz init
+
+# Install dependencies (includes ryziz from GitHub)
 npm install
+
+# Start development server
 npm run dev
 ```
 

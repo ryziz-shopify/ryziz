@@ -13,6 +13,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "dotenv": "^16.3.1",
-    "ryziz": "RYZIZ_VERSION_PLACEHOLDER"
+    "ryziz": "github:ryziz-shopify/ryziz"
   }
 }
