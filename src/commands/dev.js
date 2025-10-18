@@ -5,8 +5,53 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { spawn } from 'child_process';
 import dotenv from 'dotenv';
+import { build } from 'esbuild';
+import chokidar from 'chokidar';
+import { glob } from 'glob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Build JSX files to JS using esbuild
+ */
+async function buildJSX(ryzizDir) {
+  const functionsDir = path.join(ryzizDir, 'functions');
+  const srcRoutesDir = path.join(functionsDir, 'src/routes');
+
+  if (!fs.existsSync(srcRoutesDir)) {
+    return;
+  }
+
+  // Find all .jsx files
+  const jsxFiles = await glob('**/*.jsx', {
+    cwd: srcRoutesDir,
+    absolute: true
+  });
+
+  if (jsxFiles.length === 0) {
+    return;
+  }
+
+  // Build each JSX file to JS
+  for (const jsxFile of jsxFiles) {
+    const outfile = jsxFile.replace(/\.jsx$/, '.js');
+
+    await build({
+      entryPoints: [jsxFile],
+      outfile,
+      format: 'esm',
+      platform: 'node',
+      target: 'node18',
+      jsx: 'transform',
+      bundle: false,
+      sourcemap: true,
+      logLevel: 'error'
+    });
+
+    // Remove the original .jsx file
+    await fs.remove(jsxFile);
+  }
+}
 
 export async function devCommand() {
   const projectDir = process.cwd();
@@ -92,6 +137,11 @@ export async function devCommand() {
 
     spinner.succeed('Source files copied');
 
+    // Step 2.5: Build JSX files to JS
+    spinner.start('Building JSX files...');
+    await buildJSX(ryzizDir);
+    spinner.succeed('JSX files built');
+
     // Step 3: Install function dependencies
     spinner.start('Installing function dependencies...');
 
@@ -138,6 +188,53 @@ export async function devCommand() {
       cwd: path.join(ryzizDir, 'functions'),
       stdio: 'inherit'
     });
+
+    // Step 5: Watch for JSX file changes and rebuild
+    const srcRoutesDir = path.join(projectDir, 'src/routes');
+    if (fs.existsSync(srcRoutesDir)) {
+      const watcher = chokidar.watch('**/*.jsx', {
+        cwd: srcRoutesDir,
+        persistent: true,
+        ignoreInitial: true
+      });
+
+      watcher.on('change', async (filePath) => {
+        console.log(chalk.cyan(`\n♻️  ${filePath} changed, rebuilding...`));
+
+        // Copy changed file to .ryziz
+        const srcFile = path.join(srcRoutesDir, filePath);
+        const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
+        await fs.copy(srcFile, destFile);
+
+        // Rebuild JSX
+        await buildJSX(ryzizDir);
+        console.log(chalk.green('✅ Rebuild complete\n'));
+      });
+
+      watcher.on('add', async (filePath) => {
+        console.log(chalk.cyan(`\n➕ ${filePath} added, rebuilding...`));
+
+        // Copy new file to .ryziz
+        const srcFile = path.join(srcRoutesDir, filePath);
+        const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
+        await fs.copy(srcFile, destFile);
+
+        // Rebuild JSX
+        await buildJSX(ryzizDir);
+        console.log(chalk.green('✅ Rebuild complete\n'));
+      });
+
+      watcher.on('unlink', async (filePath) => {
+        console.log(chalk.cyan(`\n➖ ${filePath} removed, cleaning up...`));
+
+        // Remove from .ryziz (both .jsx and .js versions)
+        const jsxFile = path.join(ryzizDir, 'functions/src/routes', filePath);
+        const jsFile = jsxFile.replace(/\.jsx$/, '.js');
+        await fs.remove(jsxFile);
+        await fs.remove(jsFile);
+        console.log(chalk.green('✅ Cleanup complete\n'));
+      });
+    }
 
     // Handle shutdown
     let isShuttingDown = false;

@@ -6,8 +6,52 @@ import ora from 'ora';
 import { spawn } from 'child_process';
 import dotenv from 'dotenv';
 import inquirer from 'inquirer';
+import { build } from 'esbuild';
+import { glob } from 'glob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Build JSX files to JS using esbuild
+ */
+async function buildJSX(ryzizDir) {
+  const functionsDir = path.join(ryzizDir, 'functions');
+  const srcRoutesDir = path.join(functionsDir, 'src/routes');
+
+  if (!fs.existsSync(srcRoutesDir)) {
+    return;
+  }
+
+  // Find all .jsx files
+  const jsxFiles = await glob('**/*.jsx', {
+    cwd: srcRoutesDir,
+    absolute: true
+  });
+
+  if (jsxFiles.length === 0) {
+    return;
+  }
+
+  // Build each JSX file to JS
+  for (const jsxFile of jsxFiles) {
+    const outfile = jsxFile.replace(/\.jsx$/, '.js');
+
+    await build({
+      entryPoints: [jsxFile],
+      outfile,
+      format: 'esm',
+      platform: 'node',
+      target: 'node18',
+      jsx: 'transform',
+      bundle: false,
+      sourcemap: true,
+      logLevel: 'error'
+    });
+
+    // Remove the original .jsx file
+    await fs.remove(jsxFile);
+  }
+}
 
 export async function deployCommand() {
   const projectDir = process.cwd();
@@ -120,6 +164,11 @@ export async function deployCommand() {
     await fs.copy(envPath, path.join(ryzizDir, 'functions/.env'));
 
     spinner.succeed('Source files copied');
+
+    // Step 3.5: Build JSX files to JS
+    spinner.start('Building JSX files...');
+    await buildJSX(ryzizDir);
+    spinner.succeed('JSX files built');
 
     // Step 4: Install production dependencies
     spinner.start('Installing production dependencies...');
