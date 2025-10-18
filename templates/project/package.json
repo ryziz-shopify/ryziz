@@ -1,0 +1,14 @@
+{
+  "name": "PROJECT_NAME_PLACEHOLDER",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "ryziz dev",
+    "deploy": "ryziz deploy"
+  },
+  "dependencies": {
+    "ryziz": "^0.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
