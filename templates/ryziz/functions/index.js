@@ -1,6 +1,3 @@
-// Enable TSX loader for JSX file support at runtime
-import 'tsx/esm';
-
 import { onRequest } from 'firebase-functions/v2/https';
 import { createServer } from 'ryziz/core';
 import dotenv from 'dotenv';
