@@ -142,12 +142,13 @@ export async function deployCommand() {
     spinner.start(`Deploying to Firebase project: ${projectId}...`);
     console.log(chalk.gray('\nThis may take a few minutes...\n'));
 
-    const deploy = spawn('firebase', [
+    const deploy = spawn('npx', [
+      'firebase',
       'deploy',
       '--only', 'hosting,functions',
       '--project', projectId
     ], {
-      cwd: ryzizDir,
+      cwd: path.join(ryzizDir, 'functions'),
       stdio: 'inherit'
     });
 

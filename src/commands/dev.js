@@ -58,10 +58,10 @@ export async function devCommand() {
       path.join(templatesDir, 'functions/package.json'),
       'utf-8'
     );
-    // Use npm link for local development
+    // Use file: protocol for local development
     const functionsPackage = functionsPackageTemplate.replace(
       'RYZIZ_VERSION_PLACEHOLDER',
-      'link:../../../ryziz'
+      'file:../../../ryziz'
     );
     await fs.writeFile(
       path.join(ryzizDir, 'functions/package.json'),
@@ -127,28 +127,48 @@ export async function devCommand() {
     console.log(chalk.bold('\n🔥 Starting Firebase emulators...\n'));
     console.log(chalk.green('  ✓ Functions:  ') + chalk.gray('http://localhost:5001'));
     console.log(chalk.green('  ✓ Firestore:  ') + chalk.gray('http://localhost:8080'));
-    console.log(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:5000') + chalk.bold(' <- Your app'));
-    console.log(chalk.cyan('  ℹ UI:         ') + chalk.gray('http://localhost:4000\n'));
+    console.log(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:3000') + chalk.bold(' <- Your app\n'));
 
-    const emulators = spawn('firebase', [
+    const emulators = spawn('npx', [
+      'firebase',
       'emulators:start',
+      '--only', 'functions,firestore,hosting',
       '--project', 'demo-project'
     ], {
-      cwd: ryzizDir,
+      cwd: path.join(ryzizDir, 'functions'),
       stdio: 'inherit'
     });
 
     // Handle shutdown
+    let isShuttingDown = false;
     process.on('SIGINT', () => {
+      if (isShuttingDown) {
+        console.log(chalk.red('\n\n⚠️  Force stopping...'));
+        emulators.kill('SIGKILL');
+        process.exit(1);
+      }
+
+      isShuttingDown = true;
       console.log(chalk.yellow('\n\n⏹  Stopping development server...'));
-      emulators.kill();
-      process.exit(0);
+
+      // Send SIGINT to allow graceful shutdown
+      emulators.kill('SIGINT');
+
+      // Wait for emulators to close gracefully
+      setTimeout(() => {
+        if (emulators.exitCode === null) {
+          console.log(chalk.yellow('⚠️  Shutdown taking too long, forcing exit...'));
+          emulators.kill('SIGKILL');
+        }
+      }, 5000);
     });
 
     // Keep process running
     emulators.on('close', (code) => {
-      console.log(chalk.red(`Firebase emulators exited with code ${code}`));
-      process.exit(code);
+      if (!isShuttingDown) {
+        console.log(chalk.red(`\nFirebase emulators exited unexpectedly with code ${code}`));
+      }
+      process.exit(code || 0);
     });
 
   } catch (error) {
