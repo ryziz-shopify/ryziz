@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import { build } from 'esbuild';
 import chokidar from 'chokidar';
 import { glob } from 'glob';
+import { buildClientBundles } from '../build/client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -133,7 +134,13 @@ export async function devCommand() {
 
     spinner.succeed('Source files copied');
 
-    // Step 2.5: Build JSX files to JS
+    // Step 2.5: Build client bundles for hydration (BEFORE transforming JSX)
+    // SECURITY: Must run before buildJSX to strip server code from .jsx source
+    spinner.start('Building client bundles for hydration...');
+    await buildClientBundles(ryzizDir);
+    spinner.succeed('Client bundles built');
+
+    // Step 2.6: Build JSX files to JS (for server-side rendering)
     spinner.start('Building JSX files...');
     await buildJSX(ryzizDir);
     spinner.succeed('JSX files built');
@@ -188,8 +195,9 @@ export async function devCommand() {
         const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
         await fs.copy(srcFile, destFile);
 
-        // Rebuild JSX
+        // Rebuild JSX and client bundles
         await buildJSX(ryzizDir);
+        await buildClientBundles(ryzizDir);
         console.log(chalk.green('✅ Rebuild complete\n'));
       });
 
@@ -201,8 +209,9 @@ export async function devCommand() {
         const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
         await fs.copy(srcFile, destFile);
 
-        // Rebuild JSX
+        // Rebuild JSX and client bundles
         await buildJSX(ryzizDir);
+        await buildClientBundles(ryzizDir);
         console.log(chalk.green('✅ Rebuild complete\n'));
       });
 

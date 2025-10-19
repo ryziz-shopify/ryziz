@@ -3,13 +3,8 @@
   "version": "0.0.1",
   "description": "Shopify SSR Framework - Zero-config, Express-based, Firebase-powered",
   "type": "module",
-  "main": "index.js",
   "bin": {
     "ryziz": "./bin/cli.js"
-  },
-  "exports": {
-    ".": "./index.js",
-    "./core": "./src/core/server.js"
   },
   "scripts": {
     "test": "echo \"No tests yet\"",
@@ -27,6 +22,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@babel/generator": "^7.28.3",
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@babel/types": "^7.28.4",
     "@shopify/shopify-api": "^11.9.0",
     "@shopify/shopify-app-express": "^5.0.13",
     "chalk": "^5.3.0",
