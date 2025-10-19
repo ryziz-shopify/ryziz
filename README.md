@@ -7,7 +7,7 @@ Build Shopify apps with file-based routing, SSR, and zero configuration.
 ## Quick Start
 
 ```bash
-npx ryziz init
+npx github:ryziz-shopify/ryziz init
 npm install
 npm run dev
 npm run deploy
@@ -79,4 +79,4 @@ MIT
 
 ---
 
-**Get started:** `npx ryziz init`
+**Get started:** `npx github:ryziz-shopify/ryziz init`
