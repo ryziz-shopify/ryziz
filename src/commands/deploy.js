@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import inquirer from 'inquirer';
 import { build } from 'esbuild';
 import { glob } from 'glob';
+import { buildClientBundles } from '../build/client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -169,6 +170,12 @@ export async function deployCommand() {
     spinner.start('Building JSX files...');
     await buildJSX(ryzizDir);
     spinner.succeed('JSX files built');
+
+    // Step 3.6: Build client bundles for hydration (production mode)
+    spinner.start('Building client bundles for hydration...');
+    process.env.NODE_ENV = 'production';
+    await buildClientBundles(ryzizDir);
+    spinner.succeed('Client bundles built');
 
     // Step 4: Install production dependencies
     spinner.start('Installing production dependencies...');

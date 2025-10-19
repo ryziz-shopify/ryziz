@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import { build } from 'esbuild';
 import chokidar from 'chokidar';
 import { glob } from 'glob';
+import { buildClientBundles } from '../build/client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -138,6 +139,11 @@ export async function devCommand() {
     await buildJSX(ryzizDir);
     spinner.succeed('JSX files built');
 
+    // Step 2.6: Build client bundles for hydration
+    spinner.start('Building client bundles for hydration...');
+    await buildClientBundles(ryzizDir);
+    spinner.succeed('Client bundles built');
+
     // Step 3: Install function dependencies
     spinner.start('Installing function dependencies...');
 
@@ -188,8 +194,9 @@ export async function devCommand() {
         const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
         await fs.copy(srcFile, destFile);
 
-        // Rebuild JSX
+        // Rebuild JSX and client bundles
         await buildJSX(ryzizDir);
+        await buildClientBundles(ryzizDir);
         console.log(chalk.green('✅ Rebuild complete\n'));
       });
 
@@ -201,8 +208,9 @@ export async function devCommand() {
         const destFile = path.join(ryzizDir, 'functions/src/routes', filePath);
         await fs.copy(srcFile, destFile);
 
-        // Rebuild JSX
+        // Rebuild JSX and client bundles
         await buildJSX(ryzizDir);
+        await buildClientBundles(ryzizDir);
         console.log(chalk.green('✅ Rebuild complete\n'));
       });
 

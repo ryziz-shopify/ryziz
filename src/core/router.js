@@ -58,8 +58,9 @@ export function createRouter({ routesDir, shopify }) {
           html = renderToString(React.createElement(Component, data));
         }
 
-        // Send full HTML response
-        res.send(wrapHTML(html, headData, req));
+        // Send full HTML response with hydration data
+        const routeName = path.basename(filePath, path.extname(filePath));
+        res.send(wrapHTML(html, headData, data, routeName, req));
       } catch (error) {
         next(error);
       }
@@ -155,7 +156,7 @@ function scanRoutes(dir) {
   return routes;
 }
 
-function wrapHTML(content, head = {}, req) {
+function wrapHTML(content, head = {}, data = {}, routeName = 'index', req) {
   const { title = 'Shopify App', description = '' } = head;
   const { shop } = req.query;
 
@@ -166,6 +167,20 @@ function wrapHTML(content, head = {}, req) {
       window.apiKey = "${process.env.SHOPIFY_API_KEY || ''}";
     </script>
   ` : '';
+
+  // Serialize loader data for client-side hydration
+  const serializedData = JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+
+  // Hydration scripts - loads React and the route's client bundle
+  const hydrationScripts = `
+    <script>
+      window.__RYZIZ_DATA__ = ${serializedData};
+    </script>
+    <script type="module" src="/runtime.js"></script>
+  `;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -188,8 +203,9 @@ function wrapHTML(content, head = {}, req) {
     }
   </style>
 </head>
-<body>
-  <div id="app">${content}</div>
+<body data-route="${routeName}">
+  <div id="root">${content}</div>
+  ${hydrationScripts}
 </body>
 </html>`;
 }
