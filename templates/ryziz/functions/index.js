@@ -10,6 +10,7 @@ import admin from 'firebase-admin';
 import fs from 'fs';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { AppProvider } from '@shopify/polaris';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -147,6 +148,16 @@ function firestoreSessionStorage() {
 // ROUTER (from src/core/router.js)
 // ============================================================================
 
+function checkPolarisImports(filePath) {
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    return fileContent.includes('@shopify/polaris');
+  } catch (error) {
+    console.error(`Error reading file ${filePath}:`, error);
+    return false;
+  }
+}
+
 function scanRoutes(dir) {
   const routes = [];
 
@@ -245,6 +256,7 @@ function wrapHTML(content, head = {}, data = {}, routeName = 'index', req) {
   <title>${escapeHtml(title)}</title>
   ${description ? `<meta name="description" content="${escapeHtml(description)}">` : ''}
   ${appBridgeScript}
+  <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@13/build/esm/styles.css" />
   <style>
     * {
       margin: 0;
@@ -275,6 +287,21 @@ function createRouter({ routesDir, shopify }) {
     // Register GET handler
     router.get(routePath, async (req, res, next) => {
       try {
+        // Check for Polaris imports
+        const hasPolarisImports = checkPolarisImports(filePath);
+        const isAppRoute = routePath.startsWith('/app');
+
+        // Validate: Polaris only allowed in /app/* routes
+        if (hasPolarisImports && !isAppRoute) {
+          const error = new Error(
+            `Polaris components can only be imported in /app/* routes.\n` +
+            `Found '@shopify/polaris' import in: ${routePath}\n\n` +
+            `Move this route to /app/ or use custom components instead.`
+          );
+          error.code = 'POLARIS_IMPORT_VIOLATION';
+          throw error;
+        }
+
         const routeModule = await import(path.resolve(filePath));
 
         const context = {
@@ -305,7 +332,21 @@ function createRouter({ routesDir, shopify }) {
         let html = '';
         if (routeModule.default) {
           const Component = routeModule.default;
-          html = renderToString(React.createElement(Component, data));
+
+          // Wrap /app/* routes with Polaris provider
+          // Note: App Bridge initializes client-side via script tag
+          if (isAppRoute) {
+            const wrappedComponent = React.createElement(
+              AppProvider,
+              { i18n: {} },
+              React.createElement(Component, data)
+            );
+
+            html = renderToString(wrappedComponent);
+          } else {
+            // Regular routes without Polaris wrapper
+            html = renderToString(React.createElement(Component, data));
+          }
         }
 
         const routeName = path.basename(filePath, path.extname(filePath));
