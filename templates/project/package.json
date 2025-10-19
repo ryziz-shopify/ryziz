@@ -9,6 +9,8 @@
   "dependencies": {
     "ryziz": "github:ryziz-shopify/ryziz",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@shopify/polaris": "^13.9.3",
+    "@shopify/app-bridge-react": "^4.1.6"
   }
 }

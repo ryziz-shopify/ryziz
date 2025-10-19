@@ -1,32 +1,76 @@
-# Ryziz v0.0.1
+# Ryziz
 
-**Shopify SSR Framework** - Zero-config, Express-based, Firebase-powered
+**Zero-config Shopify SSR framework with automatic Polaris integration**
 
-Build Shopify apps with Server-Side Rendering, file-based routing, and zero configuration.
+Build production-ready Shopify apps with file-based routing, server-side rendering, and zero configuration.
 
-## Features
+## What is Ryziz?
 
-- ✅ **Zero-config** - No firebase.json, no build setup needed
-- ✅ **SSR-first** - Pure server-side rendering with React
-- ✅ **File-based routing** - Automatic routing from `src/routes/`
-- ✅ **Shopify-native** - Built-in OAuth, webhooks, GraphQL
-- ✅ **Firebase-powered** - Functions + Hosting + Firestore
-- ✅ **Express foundation** - Standard Express patterns
+Ryziz is a batteries-included framework for building Shopify embedded apps. It combines:
+
+- **File-based routing** - Create a `.jsx` file, get a route
+- **Server-side rendering** - Built-in React SSR with data loading
+- **Automatic Polaris** - Admin routes (`/app/*`) get Shopify Polaris UI automatically
+- **Shopify integration** - OAuth, webhooks, GraphQL client included
+- **Firebase deployment** - Functions + Firestore + Hosting ready to go
+- **Zero configuration** - No webpack, babel, or config files needed
+
+## Why Ryziz?
+
+**Traditional Shopify app:**
+```
+Configure webpack → Set up babel → Configure Polaris providers
+→ Set up OAuth → Configure sessions → Set up routing
+→ Configure deployment → Write app
+```
+
+**With Ryziz:**
+```
+npx ryziz init → Write app → Deploy
+```
+
+## The Magic
+
+Create a file in `src/routes/app/` and you automatically get:
+
+```jsx
+// src/routes/app/products.jsx
+import { Page, Card, Button } from '@shopify/polaris';
+
+export async function loader({ shopify }) {
+  const data = await shopify.graphql(`query { products { ... } }`);
+  return data;
+}
+
+export default function Products({ products }) {
+  return (
+    <Page title="Products">
+      <Card>
+        {/* Polaris components just work! */}
+        <Button primary>Add Product</Button>
+      </Card>
+    </Page>
+  );
+}
+```
+
+**No provider setup. No configuration. Just works.**
+
+The framework automatically:
+- ✅ Wraps `/app/*` routes with `<AppProvider>` and `<AppBridgeProvider>`
+- ✅ Loads Polaris CSS
+- ✅ Handles Shopify authentication
+- ✅ Provides GraphQL client
+- ✅ Server-renders everything
 
 ## Quick Start
 
 ```bash
 # Create new project
-mkdir my-shopify-app && cd my-shopify-app
-
-# Initialize project (downloads from GitHub)
-npx github:ryziz-shopify/ryziz init
+npx ryziz init
 
 # Install dependencies
 npm install
-
-# Configure credentials
-# Edit .env.development with your Shopify app credentials
 
 # Start development
 npm run dev
@@ -41,123 +85,72 @@ npm run deploy
 my-shopify-app/
 ├── src/
 │   └── routes/
-│       ├── index.jsx          # Landing page (/)
-│       └── app.jsx             # Dashboard (/app)
-├── .env.development           # Dev credentials
-├── .env.production            # Prod credentials
-└── package.json               # Simple dependencies
+│       ├── index.jsx          # Public page at /
+│       ├── contact.jsx        # Public page at /contact
+│       └── app/               # Admin routes (Polaris enabled)
+│           ├── index.jsx      # Dashboard at /app
+│           ├── products.jsx   # Products at /app/products
+│           └── settings.jsx   # Settings at /app/settings
+├── .env.development
+├── .env.production
+└── package.json
 ```
 
-## Route Files
+**Route types:**
+- **Public routes** (`/`, `/contact`) → Regular React, custom styles
+- **Admin routes** (`/app/*`) → Automatic Polaris + App Bridge
 
-### Basic Route (`src/routes/index.jsx`)
+## Philosophy
 
-```jsx
-import React from 'react';
+**Convention over configuration**
+File location determines behavior. No config files needed.
 
-// Server-side data loading
-export async function loader({ query }) {
-  return { message: 'Hello World' };
-}
+**Framework-level magic**
+Polaris wrapping, authentication, deployment - handled automatically.
 
-// Page metadata
-export async function head() {
-  return {
-    title: 'My App',
-    description: 'Welcome to my Shopify app'
-  };
-}
+**Escape hatches everywhere**
+Direct access to Express, Shopify API, Firebase when needed.
 
-// React component
-export default function Home({ message }) {
-  return <h1>{message}</h1>;
-}
-```
+## Documentation
 
-### Protected Route with Shopify (`src/routes/app.jsx`)
+After running `ryziz init`, see the README.md in your project for full documentation.
 
-```jsx
-import React from 'react';
+Or browse: [Project Documentation](./templates/project/README.md)
 
-export async function loader({ shopify }) {
-  const response = await shopify.graphql(`
-    query {
-      shop { name }
-      products(first: 10) {
-        edges {
-          node { id title }
-        }
-      }
-    }
-  `);
+## Features
 
-  return response.body.data;
-}
+- ✨ **Zero-config initialization** - `ryziz init` and you're ready
+- 📁 **File-based routing** - Files map to URLs automatically
+- ⚛️ **Server-side rendering** - React SSR with data loaders
+- 🎨 **Automatic Polaris** - `/app/*` routes get Polaris UI
+- 🔐 **Built-in auth** - Shopify OAuth and session management
+- 🔥 **Firebase ready** - Deploy to Functions + Hosting + Firestore
+- 📦 **All dependencies included** - No hunting for packages
+- 🚀 **One command deploy** - `ryziz deploy`
 
-export default function Dashboard({ shop, products }) {
-  return (
-    <div>
-      <h1>{shop.name}</h1>
-      {products.edges.map(({ node }) => (
-        <div key={node.id}>{node.title}</div>
-      ))}
-    </div>
-  );
-}
-```
+## What's Included
 
-## Commands
+- **Routing** - File-based with SSR
+- **Shopify API** - GraphQL client, REST, webhooks
+- **Polaris** - Automatic for admin routes
+- **App Bridge** - Embedded app navigation
+- **Sessions** - Firestore-backed storage
+- **OAuth** - Complete flow handled
+- **Development** - Local emulators
+- **Deployment** - Firebase Functions + Hosting
 
-### `ryziz init`
-Initialize a new project with template files
+## Requirements
 
-### `ryziz dev`
-Start Firebase emulators for local development
-- Functions: http://localhost:5001
-- Firestore: http://localhost:8080
-- Hosting: http://localhost:5000 ← Your app
-- UI: http://localhost:4000
-
-### `ryziz deploy`
-Deploy to Firebase (Functions + Hosting)
-
-## Environment Variables
-
-```bash
-# .env.development
-SHOPIFY_API_KEY=your-api-key
-SHOPIFY_API_SECRET=your-api-secret
-SHOPIFY_SCOPES=read_products,write_products
-SHOPIFY_HOST=http://localhost:5000
-NODE_ENV=development
-```
-
-## Local Development
-
-Install directly from GitHub repository:
-
-```bash
-# Create new project
-mkdir my-shopify-app && cd my-shopify-app
-
-# Initialize from GitHub
-npx github:ryziz-shopify/ryziz init
-
-# Install dependencies (includes ryziz from GitHub)
-npm install
-
-# Start development server
-npm run dev
-```
-
-## Architecture
-
-- **Express** - Web server framework
-- **@shopify/shopify-app-express** - Shopify integration
-- **Firebase Functions** - Serverless hosting
-- **Firestore** - Session storage
-- **React SSR** - Server-side rendering
+- Node.js 18+
+- Firebase project (free tier works)
+- Shopify Partner account
 
 ## License
 
 MIT
+
+---
+
+**Get started:** `npx ryziz init`
+
+**Questions?** See [Project Docs](./templates/project/README.md) after initialization
