@@ -68,6 +68,7 @@ export function tomlToEnvVars(config) {
     SHOPIFY_API_KEY: config.client_id || '',
     SHOPIFY_APP_NAME: config.name || '',
     SHOPIFY_APPLICATION_URL: config.application_url || '',
+    SHOPIFY_HOST: config.application_url || '',
     SHOPIFY_EMBEDDED: config.embedded ? 'true' : 'false',
     SHOPIFY_SCOPES: config.access_scopes?.scopes || '',
     SHOPIFY_API_VERSION: config.webhooks?.api_version || '2026-01',
