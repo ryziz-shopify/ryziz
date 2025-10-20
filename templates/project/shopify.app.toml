@@ -1,0 +1,26 @@
+# Shopify App Configuration
+# Learn more: https://shopify.dev/docs/apps/tools/cli/configuration
+#
+# To link this project to your Shopify Partner app, run:
+#   npx shopify app config link
+#
+# This will populate the client_id and other fields automatically.
+
+name = "my-ryziz-app"
+client_id = ""
+application_url = "https://your-app.web.app"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,write_products"
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
+
+[webhooks]
+api_version = "2026-01"
+
+[auth]
+redirect_urls = []

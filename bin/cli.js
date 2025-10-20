@@ -30,7 +30,8 @@ program
 program
   .command('dev')
   .description('Start development server with Firebase emulators')
-  .action(devCommand);
+  .option('--verbose', 'Enable verbose logging with detailed output')
+  .action((options) => devCommand(options));
 
 // Deploy command
 program

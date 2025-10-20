@@ -3,14 +3,16 @@
 ## Quick Start
 
 ```bash
-# Install and configure
+# Install dependencies
 npm install
-# Edit .env.development with Shopify API key and secret
 
-# Develop
+# Link to Shopify app (if not done during init)
+npx shopify app config link
+
+# Start development
 npm run dev
 
-# Deploy
+# Deploy to production
 npm run deploy
 ```
 
@@ -18,13 +20,15 @@ npm run deploy
 
 ```
 your-project/
-├── src/routes/           # Your routes
-│   ├── index.jsx        # Public page (/)
-│   └── app/             # Admin routes with Polaris
-│       └── index.jsx    # Dashboard (/app)
-├── .ryziz/              # Auto-generated (don't edit)
-├── .env.development
-└── .env.production
+├── src/routes/              # Your routes
+│   ├── index.jsx           # Public page (/)
+│   └── app/                # Admin routes with Polaris
+│       └── index.jsx       # Dashboard (/app)
+├── shopify.app.toml        # Shopify app configuration
+├── .env                    # Secrets (auto-pulled, git-ignored)
+├── .env.local              # Custom variables (optional, git-ignored)
+├── .env.local.example      # Template for custom variables
+└── .ryziz/                 # Auto-generated (don't edit)
 ```
 
 ## Routing
@@ -72,17 +76,45 @@ All exports are optional.
 
 ## Environment Setup
 
-Create `.env.development` and `.env.production`:
+### Shopify Configuration
+
+Ryziz uses Shopify CLI to manage app configuration and secrets:
 
 ```bash
-SHOPIFY_API_KEY=your_api_key
-SHOPIFY_API_SECRET=your_api_secret
-SHOPIFY_SCOPES=read_products,write_products
-SHOPIFY_HOST=https://your-app-url.web.app
-NODE_ENV=development
+# Link to your Shopify Partner app
+npx shopify app config link
+
+# This creates/updates shopify.app.toml with your app info
+# Secrets are automatically pulled when you run: npm run dev
 ```
 
-Get credentials from [Shopify Partners](https://partners.shopify.com/)
+### Multiple Environments (Optional)
+
+Create multiple configurations for different environments:
+
+```bash
+shopify.app.toml           # Default
+shopify.app.dev.toml       # Development
+shopify.app.staging.toml   # Staging
+shopify.app.production.toml # Production
+```
+
+When you run `npm run dev` or `npm run deploy`, Ryziz will prompt you to select an environment.
+
+### Custom Variables (Optional)
+
+For non-Shopify variables (Firebase config, feature flags, etc.), create `.env.local`:
+
+```bash
+# Copy the example
+cp .env.local.example .env.local
+
+# Add your custom variables
+FIREBASE_PROJECT_ID=my-project
+FEATURE_FLAG_BETA=true
+```
+
+**Note:** `.env` and `.env.local` are git-ignored for security.
 
 ## Development
 
@@ -90,19 +122,28 @@ Get credentials from [Shopify Partners](https://partners.shopify.com/)
 npm run dev
 ```
 
-Starts Firebase Emulators at http://localhost:5001
+This command:
+1. Selects your environment (if you have multiple `.toml` files)
+2. Pulls latest secrets from Shopify
+3. Starts Firebase Emulators at http://localhost:6601
 
-For Shopify testing, tunnel to localhost:
+### Testing with Shopify
+
+For Shopify embedded app testing, you'll need to tunnel to localhost:
 
 ```bash
-# Cloudflare (recommended)
-npx cloudflared tunnel --url http://localhost:5001
+# Option 1: Cloudflare (recommended, free)
+npx cloudflared tunnel --url http://localhost:6601
 
-# Or ngrok
-ngrok http 5001
+# Option 2: ngrok (requires account)
+ngrok http 6601
 ```
 
-Set public URL as `SHOPIFY_HOST` in `.env.development`
+Update your `shopify.app.toml` with the public tunnel URL:
+
+```toml
+application_url = "https://your-tunnel-url.trycloudflare.com"
+```
 
 ## Deployment
 
@@ -110,17 +151,42 @@ Set public URL as `SHOPIFY_HOST` in `.env.development`
 npm run deploy
 ```
 
-First time:
+This command:
+1. Selects your environment (production, staging, etc.)
+2. Pulls latest secrets from Shopify
+3. Builds and deploys to Firebase
+
+### First Time Setup
+
 ```bash
-npm install -g firebase-tools
+# Login to Firebase
 firebase login
+
+# Create a Firebase project
 firebase projects:create
+
+# Deploy
 npm run deploy
 ```
 
-Update Shopify app settings:
-- **App URL**: `https://your-project.web.app`
-- **Redirect URLs**: `https://your-project.web.app/auth/callback`
+### After Deployment
+
+Update your `shopify.app.toml` with production URLs:
+
+```toml
+application_url = "https://your-project.web.app"
+
+[auth]
+redirect_urls = [
+  "https://your-project.web.app/auth/callback"
+]
+```
+
+Then push the config to Shopify:
+
+```bash
+npx shopify app deploy
+```
 
 ## Common Patterns
 

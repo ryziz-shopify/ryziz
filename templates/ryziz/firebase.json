@@ -13,9 +13,9 @@
     "ignore": ["node_modules", ".git", "firebase-debug.log"]
   },
   "emulators": {
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 3000 },
+    "functions": { "port": 6602 },
+    "firestore": { "port": 6603 },
+    "hosting": { "port": 6601 },
     "ui": { "enabled": false },
     "singleProjectMode": true
   }

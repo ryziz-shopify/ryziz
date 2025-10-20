@@ -4,11 +4,12 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
 import { spawn } from 'child_process';
-import dotenv from 'dotenv';
 import inquirer from 'inquirer';
 import { build } from 'esbuild';
 import { glob } from 'glob';
 import { buildClientBundles } from '../build/client.js';
+import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
+import { loadEnvVars, fetchApiSecret } from '../utils/toml-parser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -62,18 +63,48 @@ export async function deployCommand() {
 
   console.log(chalk.bold('\n🚀 Deploying to Firebase...\n'));
 
-  // Load production environment variables
-  const envPath = path.join(projectDir, '.env.production');
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
-    console.log(chalk.gray('Loaded .env.production'));
-  } else {
-    console.error(chalk.red('❌ .env.production not found!'));
-    console.log(chalk.yellow('Please create .env.production with your production credentials.'));
+  // Step 1: Select environment (TOML file)
+  console.log(chalk.cyan('🔍 Scanning environments...\n'));
+  const selectedToml = await selectEnvironment(projectDir, false);
+
+  if (!selectedToml) {
+    console.log(chalk.red('\n❌ No Shopify configuration found'));
+    console.log(chalk.gray('   Run: npx shopify app config link\n'));
     process.exit(1);
   }
 
+  // Step 2: Fetch API secret from Shopify CLI
+  console.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
+  console.log(chalk.gray('→ Running: npx shopify app env show\n'));
+
+  let apiSecret = null;
+  try {
+    apiSecret = await fetchApiSecret(projectDir);
+    if (apiSecret) {
+      console.log(chalk.green('\n✓ API secret retrieved'));
+    } else {
+      console.log(chalk.yellow('\n⚠️  Could not retrieve API secret (continuing anyway)'));
+    }
+  } catch (error) {
+    console.log(chalk.yellow('\n⚠️  Could not retrieve API secret (continuing anyway)'));
+  }
+
   const spinner = ora();
+
+  // Step 3: Load and merge all environment variables
+  const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
+
+  // Set environment variables for the process
+  Object.entries(envVars).forEach(([key, value]) => {
+    if (value) {
+      process.env[key] = value;
+    }
+  });
+
+  // Show environment info
+  showEnvInfo(selectedToml, envVars);
+
+  spinner.text = '';
 
   try {
     // Step 1: Determine Firebase project ID
@@ -161,8 +192,11 @@ export async function deployCommand() {
       await fs.copy(publicDir, path.join(ryzizDir, 'public'));
     }
 
-    // Copy production environment file
-    await fs.copy(envPath, path.join(ryzizDir, 'functions/.env'));
+    // Write merged environment variables to .ryziz/functions/.env
+    const envContent = Object.entries(envVars)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+    await fs.writeFile(path.join(ryzizDir, 'functions/.env'), envContent);
 
     spinner.succeed('Source files copied');
 

@@ -26,6 +26,7 @@
     "@babel/parser": "^7.28.4",
     "@babel/traverse": "^7.28.4",
     "@babel/types": "^7.28.4",
+    "@shopify/cli": "^3.70.2",
     "@shopify/shopify-api": "^11.9.0",
     "@shopify/shopify-app-express": "^5.0.13",
     "chalk": "^5.3.0",
@@ -41,7 +42,8 @@
     "inquirer": "^9.2.12",
     "ora": "^8.0.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "toml": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

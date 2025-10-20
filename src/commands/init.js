@@ -3,7 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import { askToLinkShopifyApp } from '../utils/env-selector.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,18 +43,10 @@ export async function initCommand() {
       path.join(cwd, '.gitignore')
     );
 
-    // Copy env files
+    // Copy .env.local.example
     await fs.copy(
-      path.join(templatesDir, 'env.development'),
-      path.join(cwd, '.env.development')
-    );
-    await fs.copy(
-      path.join(templatesDir, 'env.production'),
-      path.join(cwd, '.env.production')
-    );
-    await fs.copy(
-      path.join(templatesDir, 'env.example'),
-      path.join(cwd, '.env.example')
+      path.join(templatesDir, 'env.local.example'),
+      path.join(cwd, '.env.local.example')
     );
 
     // Copy src folder
@@ -69,13 +62,62 @@ export async function initCommand() {
     execSync('npm install', { stdio: 'ignore' });
     spinner.succeed('Dependencies installed');
 
-    spinner.succeed(chalk.green('Project initialized successfully!'));
+    // Shopify CLI integration
+    console.log(chalk.bold('\n📦 Shopify App Configuration\n'));
 
-    console.log(chalk.cyan('\n📦 Ryziz v0.0.1 ready!\n'));
+    const shouldLink = await askToLinkShopifyApp();
+
+    if (shouldLink) {
+      console.log(chalk.cyan('\n→ Running: npx shopify app config link\n'));
+
+      try {
+        // Run shopify app config link
+        const linkProcess = spawn('npx', ['shopify', 'app', 'config', 'link'], {
+          cwd: cwd,
+          stdio: 'inherit'
+        });
+
+        await new Promise((resolve, reject) => {
+          linkProcess.on('close', (code) => {
+            if (code === 0) {
+              resolve();
+            } else {
+              reject(new Error(`Shopify CLI exited with code ${code}`));
+            }
+          });
+        });
+
+        console.log(chalk.green('\n✓ Shopify app linked successfully!'));
+        console.log(chalk.gray('  Environment variables will be pulled when you run: npm run dev\n'));
+
+      } catch (error) {
+        console.log(chalk.yellow('\n⚠️  Shopify CLI linking skipped or failed'));
+        console.log(chalk.gray('  You can link your app later by running:'));
+        console.log(chalk.cyan('    npx shopify app config link\n'));
+
+        // If linking failed, copy template so user has something to work with
+        await fs.copy(
+          path.join(templatesDir, 'shopify.app.toml'),
+          path.join(cwd, 'shopify.app.toml')
+        );
+      }
+    } else {
+      // User skipped linking - copy template for manual configuration
+      await fs.copy(
+        path.join(templatesDir, 'shopify.app.toml'),
+        path.join(cwd, 'shopify.app.toml')
+      );
+
+      console.log(chalk.gray('\n⏭  Skipped Shopify configuration'));
+      console.log(chalk.gray('  To link your app later, run:'));
+      console.log(chalk.cyan('    npx shopify app config link\n'));
+    }
+
+    console.log(chalk.green('✓ Project initialized successfully!\n'));
+    console.log(chalk.cyan('📦 Ryziz v0.0.1 ready!\n'));
     console.log(chalk.white('  Next steps:\n'));
-    console.log(chalk.yellow('  1. Edit .env.development') + chalk.gray(' # Add your Shopify credentials'));
-    console.log(chalk.yellow('  2. npm run dev') + chalk.gray('           # Start development server'));
-    console.log(chalk.yellow('  3. npm run deploy') + chalk.gray('        # Deploy to Firebase\n'));
+    console.log(chalk.yellow('  1. npm run dev') + chalk.gray('     # Start development server'));
+    console.log(chalk.yellow('  2. npm run deploy') + chalk.gray('   # Deploy to Firebase\n'));
     console.log(chalk.gray('  Edit routes in:  ') + chalk.cyan('src/routes/\n'));
 
   } catch (error) {

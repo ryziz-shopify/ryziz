@@ -14,8 +14,11 @@ import { AppProvider } from '@shopify/polaris';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Load environment variables (if .env exists - for production deployments)
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 // ============================================================================
 // SESSION STORAGE (from src/core/session.js)
@@ -405,7 +408,7 @@ function createServer(options = {}) {
     app.use(express.static(publicDir));
   }
 
-  const shopifyHost = process.env.SHOPIFY_HOST || 'http://localhost:5000';
+  const shopifyHost = process.env.SHOPIFY_HOST || 'http://localhost:6601';
   const hostScheme = shopifyHost.startsWith('https://') ? 'https' : 'http';
   const hostName = shopifyHost.replace(/https?:\/\//, '');
 
