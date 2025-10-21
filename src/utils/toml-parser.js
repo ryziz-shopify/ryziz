@@ -6,8 +6,6 @@ import { spawn } from 'child_process';
 
 /**
  * Find all shopify.app*.toml files in a directory
- * @param {string} dir - Directory to search in
- * @returns {Promise<string[]>} Array of toml file paths
  */
 export async function findShopifyTomlFiles(dir) {
   try {
@@ -23,14 +21,11 @@ export async function findShopifyTomlFiles(dir) {
 
 /**
  * Parse a shopify.app.toml file
- * @param {string} filePath - Path to the toml file
- * @returns {Promise<object>} Parsed TOML configuration
  */
 export async function parseShopifyToml(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const config = TOML.parse(content);
-    return config;
+    return TOML.parse(content);
   } catch (error) {
     throw new Error(`Failed to parse ${filePath}: ${error.message}`);
   }
@@ -38,8 +33,7 @@ export async function parseShopifyToml(filePath) {
 
 /**
  * Get environment name from toml filename
- * @param {string} filePath - Path to the toml file
- * @returns {string} Environment name (e.g., "dev", "production", "default")
+ * Returns: "dev", "production", "default", etc.
  */
 export function getEnvNameFromToml(filePath) {
   const basename = path.basename(filePath);
@@ -51,17 +45,11 @@ export function getEnvNameFromToml(filePath) {
 
   // shopify.app.dev.toml -> "dev"
   const match = basename.match(/^shopify\.app\.(.+)\.toml$/);
-  if (match) {
-    return match[1];
-  }
-
-  return 'unknown';
+  return match ? match[1] : 'unknown';
 }
 
 /**
  * Convert TOML config to environment variables
- * @param {object} config - Parsed TOML configuration
- * @returns {object} Environment variables object
  */
 export function tomlToEnvVars(config) {
   return {
@@ -77,81 +65,57 @@ export function tomlToEnvVars(config) {
 
 /**
  * Fetch SHOPIFY_API_SECRET from Shopify CLI
- * @param {string} projectDir - Project directory path
- * @returns {Promise<string|null>} API secret or null if failed
  */
 export async function fetchApiSecret(projectDir) {
-  try {
-    const envShowProcess = spawn('npx', ['shopify', 'app', 'env', 'show'], {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 30000);
+
+    const process = spawn('npx', ['shopify', 'app', 'env', 'show'], {
       cwd: projectDir,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
     let output = '';
 
-    return await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        resolve(null);
-      }, 30000);
+    process.stdout.on('data', (data) => { output += data.toString(); });
+    process.stderr.on('data', (data) => { output += data.toString(); });
 
-      envShowProcess.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      envShowProcess.stderr.on('data', (data) => {
-        output += data.toString();
-      });
-
-      envShowProcess.on('close', () => {
-        clearTimeout(timeout);
-
-        // Parse output for SHOPIFY_API_SECRET=value
-        const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
-        if (match && match[1]) {
-          resolve(match[1]);
-        } else {
-          resolve(null);
-        }
-      });
-
-      envShowProcess.on('error', () => {
-        clearTimeout(timeout);
-        resolve(null);
-      });
+    process.on('close', () => {
+      clearTimeout(timeout);
+      const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
+      resolve(match?.[1] || null);
     });
-  } catch (error) {
-    return null;
-  }
+
+    process.on('error', () => {
+      clearTimeout(timeout);
+      resolve(null);
+    });
+  });
 }
 
 /**
  * Load and merge environment variables from multiple sources
  * Priority: .env.local > apiSecret > TOML config
- * @param {string} projectDir - Project directory path
- * @param {string} tomlPath - Path to selected TOML file
- * @param {string} apiSecret - SHOPIFY_API_SECRET from env show
- * @returns {Promise<object>} Merged environment variables
  */
 export async function loadEnvVars(projectDir, tomlPath, apiSecret = null) {
   const envVars = {};
 
-  // 1. Load from TOML (lowest priority)
+  // Step 1: Load from TOML (lowest priority)
   if (tomlPath && fs.existsSync(tomlPath)) {
     const tomlConfig = await parseShopifyToml(tomlPath);
     Object.assign(envVars, tomlToEnvVars(tomlConfig));
   }
 
-  // 2. Add API secret (medium priority - from Shopify CLI)
+  // Step 2: Add API secret (medium priority)
   if (apiSecret) {
     envVars.SHOPIFY_API_SECRET = apiSecret;
   }
 
-  // 3. Load from .env.local (highest priority - custom vars)
+  // Step 3: Load from .env.local (highest priority)
   const envLocalPath = path.join(projectDir, '.env.local');
   if (fs.existsSync(envLocalPath)) {
-    const envLocalContent = await fs.readFile(envLocalPath, 'utf-8');
-    const parsed = parseEnvFile(envLocalContent);
-    Object.assign(envVars, parsed);
+    const content = await fs.readFile(envLocalPath, 'utf-8');
+    Object.assign(envVars, parseEnvFile(content));
   }
 
   return envVars;
@@ -159,45 +123,29 @@ export async function loadEnvVars(projectDir, tomlPath, apiSecret = null) {
 
 /**
  * Update application_url and redirect URLs in TOML file
- * Uses parse/stringify approach - preserves all data but reformats the file
- * @param {string} tomlPath - Path to the TOML file
- * @param {string} tunnelUrl - Tunnel URL to set
- * @returns {Promise<void>}
  */
 export async function updateTomlUrls(tomlPath, tunnelUrl) {
   try {
     const content = await fs.readFile(tomlPath, 'utf-8');
-
-    // Parse TOML to JavaScript object
     const config = TOML.parse(content);
 
-    // Generate redirect URLs
-    const redirectUrls = [
+    // Update URLs
+    config.application_url = tunnelUrl;
+    if (!config.auth) config.auth = {};
+    config.auth.redirect_urls = [
       `${tunnelUrl}/auth/callback`,
       `${tunnelUrl}/auth/shopify/callback`,
       `${tunnelUrl}/api/auth/callback`,
     ];
 
-    // Update the values
-    config.application_url = tunnelUrl;
-    if (!config.auth) {
-      config.auth = {};
-    }
-    config.auth.redirect_urls = redirectUrls;
-
-    // Stringify back to TOML
-    const updated = TOML.stringify(config);
-
-    await fs.writeFile(tomlPath, updated, 'utf-8');
+    await fs.writeFile(tomlPath, TOML.stringify(config), 'utf-8');
   } catch (error) {
     throw new Error(`Failed to update ${tomlPath}: ${error.message}`);
   }
 }
 
 /**
- * Simple .env file parser
- * @param {string} content - Content of .env file
- * @returns {object} Parsed environment variables
+ * Parse .env file content
  */
 function parseEnvFile(content) {
   const result = {};
@@ -207,9 +155,7 @@ function parseEnvFile(content) {
     const trimmed = line.trim();
 
     // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
+    if (!trimmed || trimmed.startsWith('#')) continue;
 
     // Parse KEY=VALUE
     const match = trimmed.match(/^([^=]+)=(.*)$/);
@@ -217,7 +163,7 @@ function parseEnvFile(content) {
       const key = match[1].trim();
       let value = match[2].trim();
 
-      // Remove quotes if present
+      // Remove quotes
       if ((value.startsWith('"') && value.endsWith('"')) ||
           (value.startsWith("'") && value.endsWith("'"))) {
         value = value.slice(1, -1);

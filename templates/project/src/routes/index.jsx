@@ -1,10 +1,14 @@
 import React from 'react';
 
+// Constants
+const SHOP_DOMAIN_PATTERN = '[a-zA-Z0-9][a-zA-Z0-9-]*\\.myshopify\\.com';
+const PLACEHOLDER_SHOP = 'your-store.myshopify.com';
+const EXAMPLE_SHOP = 'awesome-store.myshopify.com';
+
 // Loader function - runs on the server before rendering
 export async function loader({ request, query }) {
   const { shop } = query;
 
-  // If shop parameter exists, redirect to auth
   if (shop) {
     return {
       redirect: `/auth?shop=${shop}`
@@ -42,9 +46,9 @@ export default function Home({ shopParam }) {
             <input
               name="shop"
               type="text"
-              placeholder="your-store.myshopify.com"
+              placeholder={PLACEHOLDER_SHOP}
               required
-              pattern="[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com"
+              pattern={SHOP_DOMAIN_PATTERN}
               style={styles.input}
               defaultValue={shopParam}
             />
@@ -53,7 +57,7 @@ export default function Home({ shopParam }) {
             </button>
           </div>
           <p style={styles.hint}>
-            Example: awesome-store.myshopify.com
+            Example: {EXAMPLE_SHOP}
           </p>
         </form>
 
