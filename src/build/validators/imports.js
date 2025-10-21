@@ -2,9 +2,16 @@ import traverseModule from '@babel/traverse';
 
 const traverse = traverseModule.default || traverseModule;
 
+// Server-only Node.js built-in modules
+const SERVER_MODULES = [
+  'fs', 'fs/promises', 'path', 'os', 'crypto',
+  'child_process', 'cluster', 'net', 'http', 'https',
+  'stream', 'zlib', 'dns', 'dgram', 'readline',
+  'repl', 'tls', 'v8', 'vm', 'worker_threads'
+];
+
 /**
  * Import Validator
- *
  * Validates that client code doesn't import server-only modules
  */
 export const importValidator = {
@@ -13,60 +20,23 @@ export const importValidator = {
   validate(ast, filename) {
     const errors = [];
 
-    // Server-only Node.js built-in modules
-    const serverOnlyModules = [
-      'fs', 'fs/promises',
-      'path', 'os', 'crypto',
-      'child_process', 'cluster',
-      'net', 'http', 'https',
-      'stream', 'zlib', 'dns',
-      'dgram', 'readline', 'repl',
-      'tls', 'v8', 'vm', 'worker_threads'
-    ];
-
     traverse(ast, {
+      // Check static imports
       ImportDeclaration(path) {
         const source = path.node.source.value;
-
-        // Check if importing server-only module
-        if (serverOnlyModules.includes(source)) {
-          errors.push({
-            file: filename,
-            line: path.node.loc?.start.line,
-            column: path.node.loc?.start.column,
-            message: `Cannot import server-only module '${source}' in client code`,
-            module: source
-          });
-        }
-
-        // Check for Node.js protocol imports (node:fs, node:path)
-        if (source.startsWith('node:')) {
-          errors.push({
-            file: filename,
-            line: path.node.loc?.start.line,
-            column: path.node.loc?.start.column,
-            message: `Cannot import Node.js built-in '${source}' in client code`,
-            module: source
-          });
+        if (isServerModule(source)) {
+          errors.push(createError(filename, path.node, source));
         }
       },
 
-      // Also check dynamic imports
+      // Check dynamic imports
       CallExpression(path) {
         if (path.node.callee.type === 'Import') {
           const arg = path.node.arguments[0];
-
-          if (arg && arg.type === 'StringLiteral') {
+          if (arg?.type === 'StringLiteral') {
             const source = arg.value;
-
-            if (serverOnlyModules.includes(source) || source.startsWith('node:')) {
-              errors.push({
-                file: filename,
-                line: path.node.loc?.start.line,
-                column: path.node.loc?.start.column,
-                message: `Cannot dynamically import server-only module '${source}' in client code`,
-                module: source
-              });
+            if (isServerModule(source)) {
+              errors.push(createError(filename, path.node, source));
             }
           }
         }
@@ -76,3 +46,23 @@ export const importValidator = {
     return errors;
   }
 };
+
+/**
+ * Check if module is server-only
+ */
+function isServerModule(source) {
+  return SERVER_MODULES.includes(source) || source.startsWith('node:');
+}
+
+/**
+ * Create error object
+ */
+function createError(filename, node, source) {
+  return {
+    file: filename,
+    line: node.loc?.start.line,
+    column: node.loc?.start.column,
+    message: `Cannot import server-only module '${source}' in client code`,
+    module: source
+  };
+}

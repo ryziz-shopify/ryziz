@@ -1,37 +1,36 @@
 import React, { useState, useCallback } from 'react';
 import {
-  Page,
-  Layout,
-  Card,
-  Button,
-  ButtonGroup,
-  TextField,
-  Select,
-  Checkbox,
-  RadioButton,
-  Stack,
-  Badge,
-  Banner,
-  List,
-  TextStyle,
-  Text,
-  DataTable,
-  ResourceList,
-  ResourceItem,
-  Thumbnail,
-  EmptyState,
-  Modal,
-  Toast,
-  Frame,
-  FormLayout,
-  ChoiceList,
-  RangeSlider,
-  Tag,
-  Tabs,
-  CalloutCard,
-  DescriptionList,
-  Divider
+  Page, Layout, Card, Button, ButtonGroup, TextField, Select,
+  Checkbox, RadioButton, Stack, Badge, Banner, List, TextStyle, Text,
+  DataTable, ResourceList, ResourceItem, Thumbnail, EmptyState,
+  Modal, Toast, Frame, FormLayout, ChoiceList, RangeSlider, Tag,
+  Tabs, CalloutCard, DescriptionList, Divider
 } from '@shopify/polaris';
+
+// Demo data
+const DEMO_PRODUCTS = [
+  { id: '1', name: 'Product 1', price: '$29.99', status: 'active', image: 'https://via.placeholder.com/50' },
+  { id: '2', name: 'Product 2', price: '$49.99', status: 'draft', image: 'https://via.placeholder.com/50' },
+  { id: '3', name: 'Product 3', price: '$19.99', status: 'active', image: 'https://via.placeholder.com/50' }
+];
+
+const TABLE_ROWS = [
+  ['Product A', '100', '$2,999', 'Active'],
+  ['Product B', '50', '$1,499', 'Draft'],
+  ['Product C', '200', '$4,999', 'Active']
+];
+
+const TAB_CONFIG = [
+  { id: 'tab1', content: 'Components', panelID: 'panel1' },
+  { id: 'tab2', content: 'Forms', panelID: 'panel2' },
+  { id: 'tab3', content: 'Data', panelID: 'panel3' }
+];
+
+const SELECT_OPTIONS = [
+  { label: 'Option 1', value: 'option1' },
+  { label: 'Option 2', value: 'option2' },
+  { label: 'Option 3', value: 'option3' }
+];
 
 export async function head() {
   return {
@@ -41,7 +40,6 @@ export async function head() {
 }
 
 export default function Demo() {
-  // State management
   const [textValue, setTextValue] = useState('');
   const [selectValue, setSelectValue] = useState('option1');
   const [checked, setChecked] = useState(false);
@@ -57,25 +55,6 @@ export default function Demo() {
   const handleRadioChange = useCallback((value) => setRadioValue(value), []);
   const toggleModal = useCallback(() => setModalActive(!modalActive), [modalActive]);
   const toggleToast = useCallback(() => setToastActive(!toastActive), [toastActive]);
-
-  // Demo data
-  const products = [
-    { id: '1', name: 'Product 1', price: '$29.99', status: 'active', image: 'https://via.placeholder.com/50' },
-    { id: '2', name: 'Product 2', price: '$49.99', status: 'draft', image: 'https://via.placeholder.com/50' },
-    { id: '3', name: 'Product 3', price: '$19.99', status: 'active', image: 'https://via.placeholder.com/50' }
-  ];
-
-  const tableRows = [
-    ['Product A', '100', '$2,999', 'Active'],
-    ['Product B', '50', '$1,499', 'Draft'],
-    ['Product C', '200', '$4,999', 'Active']
-  ];
-
-  const tabs = [
-    { id: 'tab1', content: 'Components', panelID: 'panel1' },
-    { id: 'tab2', content: 'Forms', panelID: 'panel2' },
-    { id: 'tab3', content: 'Data', panelID: 'panel3' }
-  ];
 
   const toastMarkup = toastActive ? (
     <Toast content="Changes saved!" onDismiss={toggleToast} />
@@ -93,24 +72,18 @@ export default function Demo() {
         ]}
       >
         <Layout>
-          {/* Banners */}
           <Layout.Section>
-            <Banner
-              title="Welcome to Polaris Demo!"
-              status="info"
-            >
+            <Banner title="Welcome to Polaris Demo!" status="info">
               <p>This page showcases various Polaris components you can use in your app.</p>
             </Banner>
           </Layout.Section>
 
-          {/* Tabs */}
           <Layout.Section>
             <Card>
-              <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab}>
+              <Tabs tabs={TAB_CONFIG} selected={selectedTab} onSelect={setSelectedTab}>
                 {selectedTab === 0 && (
                   <Card.Section>
                     <Layout>
-                      {/* Badges */}
                       <Layout.Section oneHalf>
                         <Card title="Badges" sectioned>
                           <Stack spacing="tight">
@@ -124,7 +97,6 @@ export default function Demo() {
                         </Card>
                       </Layout.Section>
 
-                      {/* Buttons */}
                       <Layout.Section oneHalf>
                         <Card title="Buttons" sectioned>
                           <Stack vertical spacing="tight">
@@ -142,7 +114,6 @@ export default function Demo() {
                         </Card>
                       </Layout.Section>
 
-                      {/* Tags */}
                       <Layout.Section oneHalf>
                         <Card title="Tags" sectioned>
                           <Stack spacing="tight">
@@ -153,15 +124,11 @@ export default function Demo() {
                         </Card>
                       </Layout.Section>
 
-                      {/* Callout Card */}
                       <Layout.Section oneHalf>
                         <CalloutCard
                           title="Feature Highlight"
                           illustration="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
-                          primaryAction={{
-                            content: 'Learn more',
-                            url: '#'
-                          }}
+                          primaryAction={{ content: 'Learn more', url: '#' }}
                         >
                           <p>Discover powerful features to grow your business.</p>
                         </CalloutCard>
@@ -173,7 +140,6 @@ export default function Demo() {
                 {selectedTab === 1 && (
                   <Card.Section>
                     <Layout>
-                      {/* Form Controls */}
                       <Layout.Section oneHalf>
                         <Card title="Form Controls" sectioned>
                           <FormLayout>
@@ -187,11 +153,7 @@ export default function Demo() {
 
                             <Select
                               label="Select"
-                              options={[
-                                { label: 'Option 1', value: 'option1' },
-                                { label: 'Option 2', value: 'option2' },
-                                { label: 'Option 3', value: 'option3' }
-                              ]}
+                              options={SELECT_OPTIONS}
                               value={selectValue}
                               onChange={handleSelectChange}
                             />
@@ -227,7 +189,6 @@ export default function Demo() {
                         </Card>
                       </Layout.Section>
 
-                      {/* Lists */}
                       <Layout.Section oneHalf>
                         <Card title="Lists" sectioned>
                           <Text variant="headingMd" as="h3">Simple List</Text>
@@ -250,18 +211,9 @@ export default function Demo() {
 
                           <DescriptionList
                             items={[
-                              {
-                                term: 'Total Products',
-                                description: '150 items'
-                              },
-                              {
-                                term: 'Revenue',
-                                description: '$12,450'
-                              },
-                              {
-                                term: 'Status',
-                                description: 'Active'
-                              }
+                              { term: 'Total Products', description: '150 items' },
+                              { term: 'Revenue', description: '$12,450' },
+                              { term: 'Status', description: 'Active' }
                             ]}
                           />
                         </Card>
@@ -273,48 +225,23 @@ export default function Demo() {
                 {selectedTab === 2 && (
                   <Card.Section>
                     <Layout>
-                      {/* Data Table */}
                       <Layout.Section>
                         <Card title="Data Table" sectioned>
                           <DataTable
                             columnContentTypes={['text', 'numeric', 'numeric', 'text']}
                             headings={['Product', 'Quantity', 'Price', 'Status']}
-                            rows={tableRows}
+                            rows={TABLE_ROWS}
                             totals={['', '350', '$9,447', '']}
                           />
                         </Card>
                       </Layout.Section>
 
-                      {/* Resource List */}
                       <Layout.Section>
                         <Card title="Resource List">
                           <ResourceList
                             resourceName={{ singular: 'product', plural: 'products' }}
-                            items={products}
-                            renderItem={(item) => {
-                              const { id, name, price, status, image } = item;
-                              const media = <Thumbnail source={image} alt={name} />;
-
-                              return (
-                                <ResourceItem
-                                  id={id}
-                                  media={media}
-                                  accessibilityLabel={`View details for ${name}`}
-                                >
-                                  <Text variant="bodyMd" fontWeight="bold" as="h3">
-                                    {name}
-                                  </Text>
-                                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                    <Badge status={status === 'active' ? 'success' : 'warning'}>
-                                      {status}
-                                    </Badge>
-                                    <Text variant="bodySm" as="span">
-                                      {price}
-                                    </Text>
-                                  </div>
-                                </ResourceItem>
-                              );
-                            }}
+                            items={DEMO_PRODUCTS}
+                            renderItem={renderProductItem}
                           />
                         </Card>
                       </Layout.Section>
@@ -325,7 +252,6 @@ export default function Demo() {
             </Card>
           </Layout.Section>
 
-          {/* Modal Demo */}
           <Layout.Section oneHalf>
             <Card title="Modal Demo" sectioned>
               <Button onClick={toggleModal}>Open Modal</Button>
@@ -340,12 +266,7 @@ export default function Demo() {
                     toggleToast();
                   }
                 }}
-                secondaryActions={[
-                  {
-                    content: 'Cancel',
-                    onAction: toggleModal
-                  }
-                ]}
+                secondaryActions={[{ content: 'Cancel', onAction: toggleModal }]}
               >
                 <Modal.Section>
                   <Stack vertical>
@@ -363,7 +284,6 @@ export default function Demo() {
             </Card>
           </Layout.Section>
 
-          {/* Empty State Demo */}
           <Layout.Section oneHalf>
             <Card sectioned>
               <EmptyState
@@ -377,7 +297,6 @@ export default function Demo() {
             </Card>
           </Layout.Section>
 
-          {/* Different Status Banners */}
           <Layout.Section>
             <Stack vertical>
               <Banner status="success" title="Success Banner">
@@ -392,7 +311,6 @@ export default function Demo() {
             </Stack>
           </Layout.Section>
 
-          {/* Stats Cards */}
           <Layout.Section>
             <Layout>
               <Layout.Section oneThird>
@@ -432,5 +350,33 @@ export default function Demo() {
         {toastMarkup}
       </Page>
     </Frame>
+  );
+}
+
+/**
+ * Render product item in resource list
+ */
+function renderProductItem(item) {
+  const { id, name, price, status, image } = item;
+  const media = <Thumbnail source={image} alt={name} />;
+
+  return (
+    <ResourceItem
+      id={id}
+      media={media}
+      accessibilityLabel={`View details for ${name}`}
+    >
+      <Text variant="bodyMd" fontWeight="bold" as="h3">
+        {name}
+      </Text>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+        <Badge status={status === 'active' ? 'success' : 'warning'}>
+          {status}
+        </Badge>
+        <Text variant="bodySm" as="span">
+          {price}
+        </Text>
+      </div>
+    </ResourceItem>
   );
 }

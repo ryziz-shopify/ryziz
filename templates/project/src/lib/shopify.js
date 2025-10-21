@@ -1,7 +1,5 @@
 /**
  * Shopify Configuration
- *
- * This file allows you to customize your Shopify app settings.
  * All exports are optional - Ryziz will use sensible defaults if not provided.
  */
 
@@ -23,36 +21,22 @@ export const scopes = [
  * @see https://shopify.dev/api/admin-rest/2024-01/resources/webhook
  */
 export const webhooks = {
-  /**
-   * Handle app uninstallation
-   */
   APP_UNINSTALLED: async (topic, shop, body, webhookId) => {
     console.log(`App uninstalled from shop: ${shop}`);
     // Add your cleanup logic here
-    // e.g., remove shop data from database, cancel subscriptions, etc.
   },
 
-  /**
-   * Handle shop data updates
-   */
   SHOP_UPDATE: async (topic, shop, body, webhookId) => {
     console.log(`Shop updated: ${shop}`, body);
     // Update cached shop information
   },
 
-  /**
-   * Handle order creation
-   */
   ORDERS_CREATE: async (topic, shop, body, webhookId) => {
     const order = JSON.parse(body);
     console.log(`New order created in ${shop}:`, order.name);
     // Process new order
-    // e.g., send notification, update analytics, trigger fulfillment
   },
 
-  /**
-   * Handle product updates
-   */
   PRODUCTS_UPDATE: async (topic, shop, body, webhookId) => {
     const product = JSON.parse(body);
     console.log(`Product updated in ${shop}:`, product.title);
@@ -65,10 +49,7 @@ export const webhooks = {
  * Additional settings for your Shopify app
  */
 export const appConfig = {
-  // API version to use
   apiVersion: '2024-01',
-
-  // App billing configuration (optional)
   billing: {
     required: false,
     plans: [
@@ -84,16 +65,10 @@ export const appConfig = {
       }
     ]
   },
-
-  // Rate limiting configuration
   rateLimiting: {
     requestsPerSecond: 2
   },
-
-  // Session timeout (in seconds)
   sessionTimeout: 24 * 60 * 60, // 24 hours
-
-  // Custom app bridge configuration
   appBridge: {
     forceRedirect: true,
     debug: process.env.NODE_ENV === 'development'
@@ -101,39 +76,10 @@ export const appConfig = {
 };
 
 /**
- * Custom Middleware
- * Add custom Express middleware to your app
- * @param {Express} app - The Express application instance
- */
-export function setupMiddleware(app) {
-  // Example: Add custom logging
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-  });
-
-  // Example: Add custom headers
-  app.use((req, res, next) => {
-    res.setHeader('X-Powered-By', 'Ryziz');
-    next();
-  });
-
-  // Example: Add custom error handling for specific routes
-  app.use('/api/*', (err, req, res, next) => {
-    if (err.status === 401) {
-      res.status(401).json({ error: 'Authentication required' });
-    } else {
-      next(err);
-    }
-  });
-}
-
-/**
  * GraphQL Query Fragments
  * Reusable GraphQL fragments for common queries
  */
 export const graphqlFragments = {
-  // Product fields fragment
   productFields: `
     fragment ProductFields on Product {
       id
@@ -148,8 +94,6 @@ export const graphqlFragments = {
       updatedAt
     }
   `,
-
-  // Customer fields fragment
   customerFields: `
     fragment CustomerFields on Customer {
       id
@@ -162,8 +106,6 @@ export const graphqlFragments = {
       updatedAt
     }
   `,
-
-  // Order fields fragment
   orderFields: `
     fragment OrderFields on Order {
       id
@@ -184,9 +126,6 @@ export const graphqlFragments = {
  * Utility functions for common Shopify operations
  */
 export const helpers = {
-  /**
-   * Format Shopify money values
-   */
   formatMoney: (amount, currencyCode = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -194,25 +133,14 @@ export const helpers = {
     }).format(parseFloat(amount));
   },
 
-  /**
-   * Convert Shopify ID to numeric ID
-   */
   parseShopifyId: (gid) => {
-    // Extract numeric ID from Shopify GID
-    // e.g., "gid://shopify/Product/123456" -> "123456"
     return gid.split('/').pop();
   },
 
-  /**
-   * Build Shopify GID
-   */
   buildShopifyGid: (resource, id) => {
     return `gid://shopify/${resource}/${id}`;
   },
 
-  /**
-   * Check if shop domain is valid
-   */
   isValidShopDomain: (shop) => {
     const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
     return shopRegex.test(shop);
@@ -220,8 +148,17 @@ export const helpers = {
 };
 
 /**
+ * Custom Middleware
+ * Add custom Express middleware to your app
+ */
+export function setupMiddleware(app) {
+  app.use(logRequests);
+  app.use(addCustomHeaders);
+  app.use('/api/*', handleApiErrors);
+}
+
+/**
  * Export all configurations
- * Ryziz will automatically pick up these exports
  */
 export default {
   scopes,
@@ -231,3 +168,30 @@ export default {
   graphqlFragments,
   helpers
 };
+
+/**
+ * Log incoming requests
+ */
+function logRequests(req, res, next) {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+}
+
+/**
+ * Add custom response headers
+ */
+function addCustomHeaders(req, res, next) {
+  res.setHeader('X-Powered-By', 'Ryziz');
+  next();
+}
+
+/**
+ * Handle API authentication errors
+ */
+function handleApiErrors(err, req, res, next) {
+  if (err.status === 401) {
+    res.status(401).json({ error: 'Authentication required' });
+  } else {
+    next(err);
+  }
+}

@@ -36,13 +36,7 @@ export class TransformError extends Error {
 
 /**
  * AST-First Code Transform Pipeline
- *
- * Philosophy:
- * - Single AST parse per file
- * - Validators run before transformers
- * - Composable transformers
- * - Clear error reporting
- * - End-user freedom
+ * Single AST parse, validators first, composable transformers
  */
 export class CodeTransformPipeline {
   constructor() {
@@ -51,8 +45,7 @@ export class CodeTransformPipeline {
   }
 
   /**
-   * Add a transformer to the pipeline
-   * Transformers modify the AST
+   * Add transformer to pipeline
    */
   use(transformer) {
     if (!transformer || typeof transformer.transform !== 'function') {
@@ -63,8 +56,7 @@ export class CodeTransformPipeline {
   }
 
   /**
-   * Add a validator to the pipeline
-   * Validators check the AST and return errors
+   * Add validator to pipeline
    */
   validate(validator) {
     if (!validator || typeof validator.validate !== 'function') {
@@ -75,78 +67,21 @@ export class CodeTransformPipeline {
   }
 
   /**
-   * Transform source code through the pipeline
-   *
-   * @param {string} source - Source code
-   * @param {string} filename - Filename for error reporting
-   * @param {object} context - Additional context for transformers
-   * @returns {object} - { code, map, metadata }
+   * Transform source code through pipeline
    */
   async transform(source, filename, context = {}) {
     try {
-      // Step 1: Parse source code to AST (once!)
-      const ast = parse(source, {
-        sourceType: 'module',
-        plugins: ['jsx', 'typescript'],
-        errorRecovery: true
-      });
+      // Step 1: Parse to AST
+      const ast = parseSource(source);
 
-      // Step 2: Run validators BEFORE transforming
-      const allErrors = [];
+      // Step 2: Run validators
+      runValidators(this.validators, ast, filename, context);
 
-      for (const validator of this.validators) {
-        try {
-          const errors = validator.validate(ast, filename, context);
-          if (errors && errors.length > 0) {
-            allErrors.push(...errors);
-          }
-        } catch (error) {
-          allErrors.push({
-            validator: validator.name,
-            message: error.message,
-            file: filename
-          });
-        }
-      }
+      // Step 3: Apply transformers
+      const metadata = applyTransformers(this.transformers, ast, filename, context);
 
-      // Fail fast if validation errors
-      if (allErrors.length > 0) {
-        throw new ValidationError(
-          `Validation failed for ${filename}`,
-          allErrors
-        );
-      }
-
-      // Step 3: Apply transformers in order
-      const metadata = {};
-
-      for (const transformer of this.transformers) {
-        try {
-          const result = transformer.transform(ast, {
-            ...context,
-            filename,
-            metadata
-          });
-
-          // Store transformer results in metadata
-          if (result) {
-            metadata[transformer.name] = result;
-          }
-        } catch (error) {
-          throw new TransformError(
-            `Transformer '${transformer.name}' failed`,
-            filename,
-            error
-          );
-        }
-      }
-
-      // Step 4: Generate code from transformed AST (once!)
-      const output = generate(ast, {
-        retainLines: true,
-        comments: true,
-        compact: false
-      });
+      // Step 4: Generate code
+      const output = generateCode(ast);
 
       return {
         code: output.code,
@@ -155,25 +90,12 @@ export class CodeTransformPipeline {
       };
 
     } catch (error) {
-      // Re-throw custom errors
-      if (error instanceof ValidationError ||
-          error instanceof SecurityError ||
-          error instanceof TransformError) {
-        throw error;
-      }
-
-      // Wrap unknown errors
-      throw new TransformError(
-        `Failed to transform ${filename}`,
-        filename,
-        error
-      );
+      return handleTransformError(error, filename);
     }
   }
 
   /**
-   * Create a clone of this pipeline
-   * Useful for creating variants with different transformers
+   * Create pipeline clone
    */
   clone() {
     const pipeline = new CodeTransformPipeline();
@@ -181,6 +103,105 @@ export class CodeTransformPipeline {
     pipeline.validators = [...this.validators];
     return pipeline;
   }
+}
+
+/**
+ * Parse source code to AST
+ */
+function parseSource(source) {
+  return parse(source, {
+    sourceType: 'module',
+    plugins: ['jsx', 'typescript'],
+    errorRecovery: true
+  });
+}
+
+/**
+ * Run all validators
+ */
+function runValidators(validators, ast, filename, context) {
+  const allErrors = [];
+
+  for (const validator of validators) {
+    try {
+      const errors = validator.validate(ast, filename, context);
+      if (errors?.length > 0) {
+        allErrors.push(...errors);
+      }
+    } catch (error) {
+      allErrors.push({
+        validator: validator.name,
+        message: error.message,
+        file: filename
+      });
+    }
+  }
+
+  if (allErrors.length > 0) {
+    throw new ValidationError(
+      `Validation failed for ${filename}`,
+      allErrors
+    );
+  }
+}
+
+/**
+ * Apply all transformers
+ */
+function applyTransformers(transformers, ast, filename, context) {
+  const metadata = {};
+
+  for (const transformer of transformers) {
+    try {
+      const result = transformer.transform(ast, {
+        ...context,
+        filename,
+        metadata
+      });
+
+      if (result) {
+        metadata[transformer.name] = result;
+      }
+    } catch (error) {
+      throw new TransformError(
+        `Transformer '${transformer.name}' failed`,
+        filename,
+        error
+      );
+    }
+  }
+
+  return metadata;
+}
+
+/**
+ * Generate code from AST
+ */
+function generateCode(ast) {
+  return generate(ast, {
+    retainLines: true,
+    comments: true,
+    compact: false
+  });
+}
+
+/**
+ * Handle transform errors
+ */
+function handleTransformError(error, filename) {
+  // Re-throw custom errors
+  if (error instanceof ValidationError ||
+      error instanceof SecurityError ||
+      error instanceof TransformError) {
+    throw error;
+  }
+
+  // Wrap unknown errors
+  throw new TransformError(
+    `Failed to transform ${filename}`,
+    filename,
+    error
+  );
 }
 
 /**

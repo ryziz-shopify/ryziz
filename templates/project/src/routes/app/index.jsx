@@ -1,56 +1,75 @@
 import React from 'react';
 import { Page, Layout, Card, ResourceList, ResourceItem, Text, Badge, Button, Banner, EmptyState, SkeletonPage, SkeletonBodyText } from '@shopify/polaris';
 
-// Loader function - runs on the server with Shopify context
-export async function loader({ shopify }) {
-  // The shopify object is provided by the middleware for protected routes
-  // It includes the authenticated GraphQL client
-
-  try {
-    // Fetch shop information and products
-    const response = await shopify.graphql(`
-      query {
-        shop {
-          name
-          email
-          currencyCode
-          primaryDomain {
-            url
-            host
-          }
-          plan {
-            displayName
-          }
-        }
-        products(first: 10, sortKey: CREATED_AT, reverse: true) {
-          edges {
-            node {
-              id
-              title
-              handle
-              status
-              priceRange {
-                minVariantPrice {
-                  amount
-                  currencyCode
-                }
-              }
-              images(first: 1) {
-                edges {
-                  node {
-                    url
-                    altText
-                  }
-                }
-              }
-              totalInventory
-              createdAt
+// GraphQL Queries
+const SHOP_QUERY = `
+  query {
+    shop {
+      name
+      email
+      currencyCode
+      primaryDomain {
+        url
+        host
+      }
+      plan {
+        displayName
+      }
+    }
+    products(first: 10, sortKey: CREATED_AT, reverse: true) {
+      edges {
+        node {
+          id
+          title
+          handle
+          status
+          priceRange {
+            minVariantPrice {
+              amount
+              currencyCode
             }
           }
+          images(first: 1) {
+            edges {
+              node {
+                url
+                altText
+              }
+            }
+          }
+          totalInventory
+          createdAt
         }
       }
-    `);
+    }
+  }
+`;
 
+const CREATE_PRODUCT_MUTATION = `
+  mutation {
+    productCreate(input: {
+      title: "Sample Product"
+      productType: "Demo"
+      vendor: "Ryziz Demo"
+      status: DRAFT
+    }) {
+      product {
+        id
+        title
+        handle
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+// Loader function - runs on the server with Shopify context
+export async function loader({ shopify }) {
+  try {
+    const response = await shopify.graphql(SHOP_QUERY);
     const data = response.body.data;
 
     return {
@@ -73,26 +92,7 @@ export async function action({ shopify, body }) {
 
   if (actionType === 'createProduct') {
     try {
-      const response = await shopify.graphql(`
-        mutation {
-          productCreate(input: {
-            title: "Sample Product"
-            productType: "Demo"
-            vendor: "Ryziz Demo"
-            status: DRAFT
-          }) {
-            product {
-              id
-              title
-              handle
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      `);
+      const response = await shopify.graphql(CREATE_PRODUCT_MUTATION);
 
       if (response.body.data.productCreate.userErrors.length > 0) {
         return {
@@ -104,7 +104,7 @@ export async function action({ shopify, body }) {
       return {
         success: true,
         product: response.body.data.productCreate.product,
-        redirect: '/app'  // Refresh to show new product
+        redirect: '/app'
       };
     } catch (error) {
       return {
@@ -130,7 +130,6 @@ export async function head({ data }) {
 
 // React component for the dashboard
 export default function Dashboard({ shop, products, error, success }) {
-  // Error state
   if (error) {
     return (
       <Page title="Dashboard">
@@ -145,7 +144,6 @@ export default function Dashboard({ shop, products, error, success }) {
     );
   }
 
-  // Loading state
   if (!shop) {
     return (
       <SkeletonPage primaryAction>
@@ -160,7 +158,6 @@ export default function Dashboard({ shop, products, error, success }) {
     );
   }
 
-  // Stats cards
   const statsMarkup = (
     <Layout>
       <Layout.Section oneThird>
@@ -190,7 +187,6 @@ export default function Dashboard({ shop, products, error, success }) {
     </Layout>
   );
 
-  // Create product action
   const createProductAction = (
     <form method="POST" style={{ display: 'inline' }}>
       <input type="hidden" name="actionType" value="createProduct" />
@@ -234,46 +230,52 @@ export default function Dashboard({ shop, products, error, success }) {
               <ResourceList
                 resourceName={{ singular: 'product', plural: 'products' }}
                 items={products}
-                renderItem={(product) => {
-                  const { id, title, status, priceRange, totalInventory, images } = product;
-                  const media = images?.edges?.[0] ? (
-                    <img
-                      src={images.edges[0].node.url}
-                      alt={images.edges[0].node.altText || title}
-                      style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }}
-                    />
-                  ) : undefined;
-
-                  const price = priceRange?.minVariantPrice
-                    ? `${priceRange.minVariantPrice.currencyCode} ${priceRange.minVariantPrice.amount}`
-                    : 'No price';
-
-                  return (
-                    <ResourceItem
-                      id={id}
-                      media={media}
-                      accessibilityLabel={`View details for ${title}`}
-                    >
-                      <Text variant="bodyMd" fontWeight="bold" as="h3">
-                        {title}
-                      </Text>
-                      <div style={{ display: 'flex', gap: '12px', marginTop: '8px', alignItems: 'center' }}>
-                        <Badge tone={status === 'ACTIVE' ? 'success' : 'warning'}>
-                          {status}
-                        </Badge>
-                        <Text variant="bodySm" as="span">{price}</Text>
-                        <Text variant="bodySm" as="span" tone="subdued">
-                          Inventory: {totalInventory || 0}
-                        </Text>
-                      </div>
-                    </ResourceItem>
-                  );
-                }}
+                renderItem={renderProductItem}
               />
             )}
           </Card>
         </Layout.Section>
       </Layout>
     </Page>
+  );
+}
+
+/**
+ * Render individual product item in list
+ */
+function renderProductItem(product) {
+  const { id, title, status, priceRange, totalInventory, images } = product;
+
+  const media = images?.edges?.[0] ? (
+    <img
+      src={images.edges[0].node.url}
+      alt={images.edges[0].node.altText || title}
+      style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }}
+    />
+  ) : undefined;
+
+  const price = priceRange?.minVariantPrice
+    ? `${priceRange.minVariantPrice.currencyCode} ${priceRange.minVariantPrice.amount}`
+    : 'No price';
+
+  return (
+    <ResourceItem
+      id={id}
+      media={media}
+      accessibilityLabel={`View details for ${title}`}
+    >
+      <Text variant="bodyMd" fontWeight="bold" as="h3">
+        {title}
+      </Text>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '8px', alignItems: 'center' }}>
+        <Badge tone={status === 'ACTIVE' ? 'success' : 'warning'}>
+          {status}
+        </Badge>
+        <Text variant="bodySm" as="span">{price}</Text>
+        <Text variant="bodySm" as="span" tone="subdued">
+          Inventory: {totalInventory || 0}
+        </Text>
+      </div>
+    </ResourceItem>
   );
 }

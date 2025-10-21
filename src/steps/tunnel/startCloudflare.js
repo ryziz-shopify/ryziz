@@ -20,7 +20,19 @@ export async function startCloudflare({ localUrl = 'http://localhost:6601', logg
   // Extract tunnel URL from output
   logger?.verbose?.('Waiting for tunnel URL...');
 
-  const tunnelUrl = await new Promise((resolve, reject) => {
+  const tunnelUrl = await extractTunnelUrl(tunnelProcess, logger);
+
+  logger?.log?.(chalk.green(`✓ Tunnel started: ${tunnelUrl}\n`));
+  logger?.endStep?.('Start Cloudflare tunnel');
+
+  return { tunnelUrl, process: tunnelProcess };
+}
+
+/**
+ * Extract tunnel URL from process output
+ */
+async function extractTunnelUrl(proc, logger) {
+  return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error('Tunnel connection timeout (30s)'));
     }, 30000);
@@ -36,17 +48,13 @@ export async function startCloudflare({ localUrl = 'http://localhost:6601', logg
       }
     };
 
-    tunnelProcess.stdout?.on('data', extractUrl);
-    tunnelProcess.stderr?.on('data', extractUrl);
+    // Register single handler for both streams
+    proc.stdout?.on('data', extractUrl);
+    proc.stderr?.on('data', extractUrl);
 
-    tunnelProcess.on('error', (error) => {
+    proc.on('error', (error) => {
       clearTimeout(timeout);
       reject(error);
     });
   });
-
-  logger?.log?.(chalk.green(`✓ Tunnel started: ${tunnelUrl}\n`));
-  logger?.endStep?.('Start Cloudflare tunnel');
-
-  return { tunnelUrl, process: tunnelProcess };
 }
