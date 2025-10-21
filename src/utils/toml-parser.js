@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import toml from 'toml';
+import TOML from 'toml-patch';
 import { glob } from 'glob';
 import { spawn } from 'child_process';
 
@@ -29,7 +29,7 @@ export async function findShopifyTomlFiles(dir) {
 export async function parseShopifyToml(filePath) {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const config = toml.parse(content);
+    const config = TOML.parse(content);
     return config;
   } catch (error) {
     throw new Error(`Failed to parse ${filePath}: ${error.message}`);
@@ -159,19 +159,17 @@ export async function loadEnvVars(projectDir, tomlPath, apiSecret = null) {
 
 /**
  * Update application_url and redirect URLs in TOML file
+ * Uses parse/stringify approach - preserves all data but reformats the file
  * @param {string} tomlPath - Path to the TOML file
  * @param {string} tunnelUrl - Tunnel URL to set
  * @returns {Promise<void>}
  */
 export async function updateTomlUrls(tomlPath, tunnelUrl) {
   try {
-    let content = await fs.readFile(tomlPath, 'utf-8');
+    const content = await fs.readFile(tomlPath, 'utf-8');
 
-    // Update application_url
-    content = content.replace(
-      /application_url\s*=\s*"[^"]*"/,
-      `application_url = "${tunnelUrl}"`
-    );
+    // Parse TOML to JavaScript object
+    const config = TOML.parse(content);
 
     // Generate redirect URLs
     const redirectUrls = [
@@ -180,27 +178,17 @@ export async function updateTomlUrls(tomlPath, tunnelUrl) {
       `${tunnelUrl}/api/auth/callback`,
     ];
 
-    // Update redirect_url_whitelist in [auth.redirect_urls] section
-    const redirectListStr = redirectUrls.map((url, idx) => {
-      const comma = idx < redirectUrls.length - 1 ? ',' : '';
-      return `\n  "${url}"${comma}`;
-    }).join('');
-
-    // Try to find and replace existing redirect_url_whitelist
-    if (content.includes('redirect_url_whitelist')) {
-      content = content.replace(
-        /redirect_url_whitelist\s*=\s*\[[^\]]*\]/s,
-        `redirect_url_whitelist = [${redirectListStr}\n]`
-      );
-    } else if (content.includes('[auth.redirect_urls]')) {
-      // Add redirect_url_whitelist after [auth.redirect_urls]
-      content = content.replace(
-        /\[auth\.redirect_urls\]/,
-        `[auth.redirect_urls]\nredirect_url_whitelist = [${redirectListStr}\n]`
-      );
+    // Update the values
+    config.application_url = tunnelUrl;
+    if (!config.auth) {
+      config.auth = {};
     }
+    config.auth.redirect_urls = redirectUrls;
 
-    await fs.writeFile(tomlPath, content, 'utf-8');
+    // Stringify back to TOML
+    const updated = TOML.stringify(config);
+
+    await fs.writeFile(tomlPath, updated, 'utf-8');
   } catch (error) {
     throw new Error(`Failed to update ${tomlPath}: ${error.message}`);
   }

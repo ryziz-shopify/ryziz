@@ -3,266 +3,90 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
-import { spawn } from 'child_process';
 import inquirer from 'inquirer';
-import { build } from 'esbuild';
-import { glob } from 'glob';
 import { buildClientBundles } from '../build/client.js';
 import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
 import { loadEnvVars, fetchApiSecret } from '../utils/toml-parser.js';
 
+// Import steps
+import { copyTemplateFiles } from '../steps/files/copyTemplateFiles.js';
+import { copySourceFiles } from '../steps/files/copySourceFiles.js';
+import { buildJSX } from '../steps/build/buildJSX.js';
+import { installDependencies } from '../steps/firebase/installDependencies.js';
+import { deployToFirebase } from '../steps/firebase/deployToFirebase.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Build JSX files to JS using esbuild
+ * Deploy application to Firebase hosting and functions
+ * Handles production builds and environment configuration
  */
-async function buildJSX(ryzizDir) {
-  const functionsDir = path.join(ryzizDir, 'functions');
-  const srcRoutesDir = path.join(functionsDir, 'src/routes');
-
-  if (!fs.existsSync(srcRoutesDir)) {
-    return;
-  }
-
-  // Find all .jsx files
-  const jsxFiles = await glob('**/*.jsx', {
-    cwd: srcRoutesDir,
-    absolute: true
-  });
-
-  if (jsxFiles.length === 0) {
-    return;
-  }
-
-  // Build each JSX file to JS
-  for (const jsxFile of jsxFiles) {
-    const outfile = jsxFile.replace(/\.jsx$/, '.js');
-
-    await build({
-      entryPoints: [jsxFile],
-      outfile,
-      format: 'esm',
-      platform: 'node',
-      target: 'node18',
-      jsx: 'transform',
-      bundle: false,
-      sourcemap: true,
-      logLevel: 'error'
-    });
-
-    // Remove the original .jsx file
-    await fs.remove(jsxFile);
-  }
-}
-
 export async function deployCommand() {
+  // Initialize configuration
   const projectDir = process.cwd();
   const ryzizDir = path.join(projectDir, '.ryziz');
   const templatesDir = path.join(__dirname, '../../templates/ryziz');
   const configPath = path.join(ryzizDir, 'config.json');
+  const spinner = ora();
 
   console.log(chalk.bold('\n🚀 Deploying to Firebase...\n'));
 
-  // Step 1: Select environment (TOML file)
-  console.log(chalk.cyan('🔍 Scanning environments...\n'));
-  const selectedToml = await selectEnvironment(projectDir, false);
-
-  if (!selectedToml) {
-    console.log(chalk.red('\n❌ No Shopify configuration found'));
-    console.log(chalk.gray('   Run: npx shopify app config link\n'));
-    process.exit(1);
-  }
-
-  // Step 2: Fetch API secret from Shopify CLI
-  console.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
-  console.log(chalk.gray('→ Running: npx shopify app env show\n'));
-
-  let apiSecret = null;
   try {
-    apiSecret = await fetchApiSecret(projectDir);
-    if (apiSecret) {
-      console.log(chalk.green('\n✓ API secret retrieved'));
-    } else {
-      console.log(chalk.yellow('\n⚠️  Could not retrieve API secret (continuing anyway)'));
-    }
-  } catch (error) {
-    console.log(chalk.yellow('\n⚠️  Could not retrieve API secret (continuing anyway)'));
-  }
+    // Step 1: Load Shopify configuration
+    console.log(chalk.cyan('🔍 Scanning environments...\n'));
+    const selectedToml = await selectEnvironment(projectDir, false);
 
-  const spinner = ora();
-
-  // Step 3: Load and merge all environment variables
-  const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
-
-  // Set environment variables for the process
-  Object.entries(envVars).forEach(([key, value]) => {
-    if (value) {
-      process.env[key] = value;
-    }
-  });
-
-  // Show environment info
-  showEnvInfo(selectedToml, envVars);
-
-  spinner.text = '';
-
-  try {
-    // Step 1: Determine Firebase project ID
-    let projectId;
-
-    // Try to load from saved config
-    if (fs.existsSync(configPath)) {
-      const config = await fs.readJson(configPath);
-      projectId = config.projectId;
+    if (!selectedToml) {
+      console.log(chalk.red('\n❌ No Shopify configuration found'));
+      console.log(chalk.gray('   Run: npx shopify app config link\n'));
+      process.exit(1);
     }
 
-    // Prompt for project ID if not saved
-    if (!projectId) {
-      const answers = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'projectId',
-          message: 'Enter your Firebase project ID:',
-          validate: input => input.length > 0 || 'Project ID is required'
-        }
-      ]);
-      projectId = answers.projectId;
-
-      // Save for future use
-      await fs.ensureDir(ryzizDir);
-      await fs.writeJson(configPath, { projectId }, { spaces: 2 });
-      console.log(chalk.gray('Project ID saved for future deployments\n'));
+    // Step 2: Retrieve API secret (optional for deploy)
+    console.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
+    let apiSecret = null;
+    try {
+      apiSecret = await fetchApiSecret(projectDir);
+      if (apiSecret) {
+        console.log(chalk.green('\n✓ API secret retrieved'));
+      } else {
+        console.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
+      }
+    } catch {
+      console.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
     }
 
-    // Step 2: Generate production build
-    spinner.start('Preparing production build...');
+    // Step 3: Setup environment variables
+    const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
+    Object.entries(envVars).forEach(([key, value]) => {
+      if (value) process.env[key] = value;
+    });
+    showEnvInfo(selectedToml, envVars);
 
-    await fs.ensureDir(path.join(ryzizDir, 'functions'));
-    await fs.ensureDir(path.join(ryzizDir, 'public'));
+    // Step 4: Get or request Firebase project ID
+    let projectId = await getProjectId(configPath, ryzizDir);
 
-    // Copy firebase.json
-    await fs.copy(
-      path.join(templatesDir, 'firebase.json'),
-      path.join(ryzizDir, 'firebase.json')
-    );
-
-    // Generate .firebaserc with actual project ID
-    const firebasercTemplate = await fs.readFile(
-      path.join(templatesDir, 'firebaserc'),
-      'utf-8'
-    );
-    const firebaserc = firebasercTemplate.replace('PROJECT_ID_PLACEHOLDER', projectId);
-    await fs.writeFile(path.join(ryzizDir, '.firebaserc'), firebaserc);
-
-    // Copy functions/index.js
-    await fs.copy(
-      path.join(templatesDir, 'functions/index.js'),
-      path.join(ryzizDir, 'functions/index.js')
-    );
-
-    // Copy functions/package.json with published version
-    const functionsPackageTemplate = await fs.readFile(
-      path.join(templatesDir, 'functions/package.json'),
-      'utf-8'
-    );
-    // Use published version for production
-    const functionsPackage = functionsPackageTemplate.replace(
-      'RYZIZ_VERSION_PLACEHOLDER',
-      '^0.0.1'
-    );
-    await fs.writeFile(
-      path.join(ryzizDir, 'functions/package.json'),
-      functionsPackage
-    );
-
-    spinner.succeed('Production build prepared');
-
-    // Step 3: Copy source files
-    spinner.start('Copying source files...');
-
-    // Copy src directory
-    const srcDir = path.join(projectDir, 'src');
-    if (fs.existsSync(srcDir)) {
-      await fs.copy(srcDir, path.join(ryzizDir, 'functions/src'));
-    }
-
-    // Copy public directory
-    const publicDir = path.join(projectDir, 'public');
-    if (fs.existsSync(publicDir)) {
-      await fs.copy(publicDir, path.join(ryzizDir, 'public'));
-    }
-
-    // Write merged environment variables to .ryziz/functions/.env
-    const envContent = Object.entries(envVars)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    await fs.writeFile(path.join(ryzizDir, 'functions/.env'), envContent);
-
-    spinner.succeed('Source files copied');
-
-    // Step 3.5: Build client bundles for hydration (BEFORE transforming JSX)
-    // SECURITY: Must run before buildJSX to strip server code from .jsx source
-    spinner.start('Building client bundles for hydration...');
-    process.env.NODE_ENV = 'production';
-    await buildClientBundles(ryzizDir);
-    spinner.succeed('Client bundles built');
-
-    // Step 3.6: Build JSX files to JS (for server-side rendering)
-    spinner.start('Building JSX files...');
-    await buildJSX(ryzizDir);
-    spinner.succeed('JSX files built');
-
-    // Step 4: Install production dependencies
-    spinner.start('Installing production dependencies...');
-
-    const npmInstall = spawn('npm', ['install', '--production'], {
-      cwd: path.join(ryzizDir, 'functions'),
-      stdio: 'ignore'
+    // Step 5: Execute production build pipeline
+    await runProductionBuild(spinner, {
+      ryzizDir,
+      templatesDir,
+      projectDir,
+      projectId,
+      envVars
     });
 
-    await new Promise((resolve, reject) => {
-      npmInstall.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`npm install failed with code ${code}`));
-      });
-    });
-
-    spinner.succeed('Dependencies installed');
-
-    // Step 5: Deploy to Firebase
+    // Step 6: Deploy to Firebase
     spinner.start(`Deploying to Firebase project: ${projectId}...`);
-    console.log(chalk.gray('\nThis may take a few minutes...\n'));
-
-    const deploy = spawn('npx', [
-      'firebase',
-      'deploy',
-      '--only', 'hosting,functions',
-      '--project', projectId
-    ], {
-      cwd: path.join(ryzizDir, 'functions'),
-      stdio: 'inherit'
-    });
-
-    await new Promise((resolve, reject) => {
-      deploy.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`Firebase deploy failed with code ${code}`));
-        }
-      });
-    });
-
+    const result = await deployToFirebase({ ryzizDir, projectId, logger: null });
     spinner.succeed('Deployment completed');
 
-    // Success message
+    // Display success information
     console.log(chalk.green('\n✅ Deployment successful!\n'));
     console.log(chalk.bold('Your app is live at:'));
-    console.log(chalk.cyan(`  https://${projectId}.web.app`));
-    console.log(chalk.cyan(`  https://${projectId}.firebaseapp.com\n`));
-
+    console.log(chalk.cyan(`  ${result.urls.webApp}`));
+    console.log(chalk.cyan(`  ${result.urls.firebaseApp}\n`));
     console.log(chalk.gray('Functions dashboard:'));
-    console.log(chalk.gray(`  https://console.firebase.google.com/project/${projectId}/functions\n`));
+    console.log(chalk.gray(`  ${result.urls.console}\n`));
 
   } catch (error) {
     spinner.fail('Deployment failed');
@@ -272,5 +96,71 @@ export async function deployCommand() {
     console.log(chalk.gray('  2. Verify project exists: firebase projects:list'));
     console.log(chalk.gray('  3. Check .env.production has valid credentials'));
     process.exit(1);
+  }
+}
+
+/**
+ * Get Firebase project ID from config or prompt user
+ */
+async function getProjectId(configPath, ryzizDir) {
+  // Try to load from saved config
+  if (fs.existsSync(configPath)) {
+    const config = await fs.readJson(configPath);
+    if (config.projectId) return config.projectId;
+  }
+
+  // Prompt user for project ID
+  const { projectId } = await inquirer.prompt([{
+    type: 'input',
+    name: 'projectId',
+    message: 'Enter your Firebase project ID:',
+    validate: input => input.length > 0 || 'Project ID is required'
+  }]);
+
+  // Save for future deployments
+  await fs.ensureDir(ryzizDir);
+  await fs.writeJson(configPath, { projectId }, { spaces: 2 });
+  console.log(chalk.gray('Project ID saved for future deployments\n'));
+
+  return projectId;
+}
+
+/**
+ * Run production build pipeline
+ */
+async function runProductionBuild(spinner, config) {
+  const { ryzizDir, templatesDir, projectDir, projectId, envVars } = config;
+
+  // Set production mode
+  process.env.NODE_ENV = 'production';
+
+  const buildSteps = [
+    {
+      message: 'Preparing production build...',
+      action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId, logger: null })
+    },
+    {
+      message: 'Copying source files...',
+      action: () => copySourceFiles({ projectDir, ryzizDir, envVars, logger: null })
+    },
+    {
+      message: 'Building client bundles for hydration...',
+      action: () => buildClientBundles(ryzizDir)
+    },
+    {
+      message: 'Building JSX files...',
+      action: () => buildJSX({ ryzizDir, logger: null })
+    },
+    {
+      message: 'Installing production dependencies...',
+      action: () => installDependencies({ ryzizDir, production: true, logger: null })
+    }
+  ];
+
+  // Execute each build step
+  for (const step of buildSteps) {
+    spinner.start(step.message);
+    await step.action();
+    spinner.succeed(step.message.replace('...', ''));
   }
 }
