@@ -3,6 +3,7 @@ import path from 'path';
 import TOML from 'toml-patch';
 import { glob } from 'glob';
 import { spawn } from 'child_process';
+import { getShopifyBinary } from './binary-resolver.js';
 
 /**
  * Find all shopify.app*.toml files in a directory
@@ -65,12 +66,14 @@ export function tomlToEnvVars(config) {
 
 /**
  * Fetch SHOPIFY_API_SECRET from Shopify CLI
+ * Uses absolute path to shopify binary from ryziz package
  */
 export async function fetchApiSecret(projectDir) {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve(null), 30000);
 
-    const process = spawn('npx', ['shopify', 'app', 'env', 'show'], {
+    const shopifyBin = getShopifyBinary();
+    const process = spawn(shopifyBin, ['app', 'env', 'show'], {
       cwd: projectDir,
       stdio: ['ignore', 'pipe', 'pipe']
     });

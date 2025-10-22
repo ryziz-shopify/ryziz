@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 import { spawn } from 'child_process';
 import { askToLinkShopifyApp } from '../../utils/env-selector.js';
+import { getShopifyBinary } from '../../utils/binary-resolver.js';
 
 /**
  * Link Shopify app using Shopify CLI
@@ -27,11 +28,12 @@ export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
     return { linked: false };
   }
 
-  // Run Shopify CLI link
-  logger?.log?.(chalk.cyan('\n→ Running: npx shopify app config link\n'));
+  // Run Shopify CLI link using absolute path to shopify binary
+  logger?.log?.(chalk.cyan('\n→ Running: shopify app config link\n'));
 
   try {
-    const linkProcess = spawn('npx', ['shopify', 'app', 'config', 'link'], {
+    const shopifyBin = getShopifyBinary();
+    const linkProcess = spawn(shopifyBin, ['app', 'config', 'link'], {
       cwd: projectDir,
       stdio: 'inherit'
     });

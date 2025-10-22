@@ -1,6 +1,7 @@
 import path from 'path';
 import chalk from 'chalk';
 import { spawnWithLogs } from '../process/spawnWithLogs.js';
+import { getFirebaseBinary } from '../../utils/binary-resolver.js';
 
 /**
  * Start Firebase emulators (Functions, Firestore, Hosting)
@@ -13,10 +14,11 @@ export async function startEmulators({ ryzizDir, envVars = {}, logger }) {
   logger?.log?.(chalk.green('  ✓ Firestore:  ') + chalk.gray('http://localhost:6603'));
   logger?.log?.(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:6601\n'));
 
+  // Use absolute path to firebase binary from .ryziz/functions/node_modules
+  const firebaseBin = getFirebaseBinary(ryzizDir);
   const emulators = spawnWithLogs({
-    command: 'npx',
+    command: firebaseBin,
     args: [
-      'firebase',
       'emulators:start',
       '--only', 'functions,firestore,hosting',
       '--project', 'demo-project'
