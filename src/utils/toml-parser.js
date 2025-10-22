@@ -78,15 +78,27 @@ export async function fetchApiSecret(projectDir) {
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    let output = '';
+    let stdout = '';
+    let stderr = '';
 
-    process.stdout.on('data', (data) => { output += data.toString(); });
-    process.stderr.on('data', (data) => { output += data.toString(); });
+    process.stdout.on('data', (data) => { stdout += data.toString(); });
+    process.stderr.on('data', (data) => { stderr += data.toString(); });
 
-    process.on('close', () => {
+    process.on('close', (code) => {
       clearTimeout(timeout);
-      const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
-      resolve(match?.[1] || null);
+
+      // Success: extract API secret
+      if (code === 0) {
+        const match = stdout.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
+        resolve(match?.[1] || null);
+        return;
+      }
+
+      // Error: throw with Shopify CLI output
+      const output = (stdout + stderr).trim();
+      const error = new Error(output || 'Shopify CLI command failed');
+      error.code = code;
+      resolve({ error });
     });
 
     process.on('error', () => {

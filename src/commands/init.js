@@ -22,6 +22,21 @@ export async function initCommand(options = {}) {
   const templatesDir = path.join(__dirname, '../../templates/project');
   const logger = createLogger(path.join(projectDir, '.ryziz', 'logs'), options.verbose);
 
+  // Graceful cleanup handler (closes logger and exits cleanly)
+  const cleanup = (exitCode = 1) => {
+    logger.close();
+    process.exit(exitCode);
+  };
+
+  process.on('SIGINT', () => {
+    logger.log(chalk.yellow('\n⏹  Initialization cancelled'));
+    cleanup(0);
+  });
+  process.on('SIGTERM', () => {
+    logger.log(chalk.yellow('\n⏹  Initialization terminated'));
+    cleanup(0);
+  });
+
   try {
     logger.log(chalk.bold('\n🚀 Initializing Ryziz project...\n'));
 
@@ -59,13 +74,12 @@ export async function initCommand(options = {}) {
     logger.log(chalk.yellow('  2. npm run deploy') + chalk.gray('   # Deploy to Firebase\n'));
     logger.log(chalk.gray('  Edit routes in:  ') + chalk.cyan('src/routes/\n'));
 
-    logger.close();
+    cleanup(0);
 
   } catch (error) {
-    logger.endStep('Initialize project', false);
+    // Handle initialization failures gracefully
     spinner.fail('Failed to initialize project');
     logger.error(chalk.red('\n❌ Error:'), error.message);
-    logger.close();
-    process.exit(1);
+    cleanup(1);
   }
 }

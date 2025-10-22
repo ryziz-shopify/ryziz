@@ -31,6 +31,21 @@ export async function deployCommand(options = {}) {
   const spinner = ora();
   const logger = createLogger(path.join(projectDir, '.ryziz', 'logs'), options.verbose);
 
+  // Graceful cleanup handler (closes logger and exits cleanly)
+  const cleanup = (exitCode = 1) => {
+    logger.close();
+    process.exit(exitCode);
+  };
+
+  process.on('SIGINT', () => {
+    logger.log(chalk.yellow('\n⏹  Deployment cancelled'));
+    cleanup(0);
+  });
+  process.on('SIGTERM', () => {
+    logger.log(chalk.yellow('\n⏹  Deployment terminated'));
+    cleanup(0);
+  });
+
   logger.log(chalk.bold('\n🚀 Deploying to Firebase...\n'));
 
   try {
@@ -42,8 +57,7 @@ export async function deployCommand(options = {}) {
     if (!selectedToml) {
       logger.log(chalk.red('\n❌ No Shopify configuration found'));
       logger.log(chalk.gray('   Run: npm run link\n'));
-      logger.close();
-      process.exit(1);
+      cleanup(1);
     }
     logger.endStep('Load Shopify configuration');
 
@@ -51,14 +65,14 @@ export async function deployCommand(options = {}) {
     logger.startStep('Retrieve API secret');
     logger.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
     let apiSecret = null;
-    try {
-      apiSecret = await fetchApiSecret(projectDir);
-      if (apiSecret) {
-        logger.log(chalk.green('\n✓ API secret retrieved'));
-      } else {
-        logger.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
-      }
-    } catch {
+    const apiSecretResult = await fetchApiSecret(projectDir);
+
+    if (apiSecretResult?.error) {
+      logger.log('\n' + apiSecretResult.error.message + '\n');
+    } else if (apiSecretResult) {
+      apiSecret = apiSecretResult;
+      logger.log(chalk.green('\n✓ API secret retrieved'));
+    } else {
       logger.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
     }
     logger.endStep('Retrieve API secret');
@@ -105,18 +119,17 @@ export async function deployCommand(options = {}) {
     logger.log(chalk.gray('Functions dashboard:'));
     logger.log(chalk.gray(`  ${result.urls.console}\n`));
 
-    logger.close();
+    cleanup(0);
 
   } catch (error) {
-    logger.endStep('Deploy', false);
+    // Handle deployment failures gracefully
     spinner.fail('Deployment failed');
     logger.error(chalk.red(error.message));
     logger.log(chalk.yellow('\nTroubleshooting tips:'));
     logger.log(chalk.gray('  1. Ensure you are logged in: firebase login'));
     logger.log(chalk.gray('  2. Verify project exists: firebase projects:list'));
-    logger.log(chalk.gray('  3. Check .env.production has valid credentials'));
-    logger.close();
-    process.exit(1);
+    logger.log(chalk.gray('  3. Check .env.production has valid credentials\n'));
+    cleanup(1);
   }
 }
 

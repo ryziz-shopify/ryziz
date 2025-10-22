@@ -38,17 +38,17 @@ export async function devCommand(options = {}) {
   let watcher = null;
 
   // Graceful shutdown handler (kills all child processes and exits cleanly)
-  const shutdown = () => {
+  const shutdown = (exitCode = 1) => {
     logger.log(chalk.yellow('\n⏹  Stopping...'));
     if (tunnelProcess) tunnelProcess.kill();
     if (emulators) emulators.kill();
     if (watcher) watcher.close();
     logger.close();
-    process.exit(0);
+    process.exit(exitCode);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => shutdown(0));
+  process.on('SIGTERM', () => shutdown(0));
 
   try {
     // Step 1: Display startup banner
@@ -61,20 +61,26 @@ export async function devCommand(options = {}) {
     if (!selectedToml) {
       logger.log(chalk.red('\n❌ No Shopify configuration found'));
       logger.log(chalk.gray('   Run: npm run link\n'));
-      process.exit(1);
+      shutdown(1);
     }
 
     // Step 3: Retrieve Shopify API secret
     logger.log(chalk.cyan('🔐 Fetching API secret...\n'));
-    const apiSecret = await fetchApiSecret(projectDir);
+    const apiSecretResult = await fetchApiSecret(projectDir);
 
-    if (!apiSecret) {
+    if (apiSecretResult?.error) {
+      logger.log('\n' + apiSecretResult.error.message + '\n');
+      shutdown(1);
+    }
+
+    if (!apiSecretResult) {
       logger.log(chalk.red('\n❌ API secret not found'));
       logger.log(chalk.yellow('   You can manually add SHOPIFY_API_SECRET to .env.local\n'));
-      process.exit(1);
+      shutdown(1);
     }
 
     logger.log(chalk.green('✓ API secret retrieved\n'));
+    const apiSecret = apiSecretResult;
 
     // Step 4: Execute build pipeline
     // Run all necessary build steps with optional failure tolerance
@@ -194,7 +200,7 @@ export async function devCommand(options = {}) {
       tunnelProcess.on('close', (code) => {
         if (code !== 0) {
           logger.error(chalk.red(`Tunnel crashed with code ${code}`));
-          shutdown();
+          shutdown(1);
         }
       });
     }
@@ -204,7 +210,7 @@ export async function devCommand(options = {}) {
         if (code !== 0) {
           logger.error(chalk.red(`Emulators crashed with code ${code}`));
         }
-        shutdown();
+        shutdown(1);
       });
     }
 
@@ -212,6 +218,6 @@ export async function devCommand(options = {}) {
     // Handle startup failures gracefully
     spinner.fail('Failed to start');
     logger.error(chalk.red(error.message));
-    shutdown();
+    shutdown(1);
   }
 }
