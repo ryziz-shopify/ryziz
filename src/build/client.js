@@ -22,15 +22,55 @@ window.ReactDOM = ReactDOM;
 const routePath = document.body.dataset.route;
 const initialData = window.__RYZIZ_DATA__ || {};
 
+// Handle client-side redirects for embedded apps
+if (initialData?.__redirect && window.shopOrigin && window.apiKey) {
+  const redirectPath = initialData.__redirect;
+  delete initialData.__redirect;
+
+  // Use Shopify App Bridge for navigation within iframe
+  if (window.shopify && window.shopify.environment) {
+    window.location.href = redirectPath;
+  } else {
+    window.location.href = redirectPath;
+  }
+}
+
 if (routePath) {
+  const isAppRoute = window.location.pathname.startsWith('/app');
+  const hasAppBridgeConfig = window.shopOrigin && window.apiKey && window.host;
+
   // Import the route bundle and hydrate
   import('/' + routePath + '.client.js')
-    .then(module => {
+    .then(async module => {
       const Component = module.default;
-      ReactDOM.hydrateRoot(
-        document.getElementById('root'),
-        React.createElement(Component, initialData)
-      );
+      let element;
+
+      if (isAppRoute && hasAppBridgeConfig) {
+        // For embedded app routes, wrap with App Bridge and Polaris providers
+        const { Provider: AppBridgeProvider } = await import('@shopify/app-bridge-react');
+        const { AppProvider } = await import('@shopify/polaris');
+
+        const appBridgeConfig = {
+          apiKey: window.apiKey,
+          host: window.host,
+          forceRedirect: true
+        };
+
+        element = React.createElement(
+          AppBridgeProvider,
+          { config: appBridgeConfig },
+          React.createElement(
+            AppProvider,
+            { i18n: {} },
+            React.createElement(Component, initialData)
+          )
+        );
+      } else {
+        // Public routes don't need providers
+        element = React.createElement(Component, initialData);
+      }
+
+      ReactDOM.hydrateRoot(document.getElementById('root'), element);
     })
     .catch(err => console.error('Hydration failed:', err));
 }
@@ -114,7 +154,8 @@ async function buildRuntimeBundle(ryzizDir, publicDir) {
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     },
-    logLevel: 'warning'
+    logLevel: 'warning',
+    external: ['@shopify/app-bridge-react', '@shopify/polaris']
   });
 
   await fs.remove(runtimeTempPath);

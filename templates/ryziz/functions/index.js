@@ -99,7 +99,7 @@ function createRouter({ routesDir, shopify }) {
 
   routes.forEach(({ routePath, filePath }) => {
     router.get(routePath, (req, res, next) => handleGet(req, res, next, filePath, routePath));
-    router.post(routePath, (req, res, next) => handlePost(req, res, next, filePath));
+    router.post(routePath, (req, res, next) => handlePost(req, res, next, filePath, routePath));
   });
 
   return router;
@@ -262,6 +262,12 @@ function wrapHTML(content, head = {}, data = {}, routeName = 'index', req) {
     <script>
       window.shopOrigin = "${shop}";
       window.apiKey = "${process.env.SHOPIFY_API_KEY || ''}";
+      window.host = "${req.query.host || ''}";
+
+      // Initialize App Bridge for proper iframe communication
+      if (window.shopify && window.shopify.environment) {
+        console.log('App Bridge environment detected');
+      }
     </script>
   ` : '';
 
@@ -278,6 +284,17 @@ function wrapHTML(content, head = {}, data = {}, routeName = 'index', req) {
   <title>${escapeHtml(title)}</title>
   ${description ? `<meta name="description" content="${escapeHtml(description)}">` : ''}
   ${appBridgeScript}
+  <script type="importmap">
+    {
+      "imports": {
+        "@shopify/app-bridge-react": "https://cdn.jsdelivr.net/npm/@shopify/app-bridge-react@4.1.6/+esm",
+        "@shopify/polaris": "https://cdn.jsdelivr.net/npm/@shopify/polaris@13.9.3/+esm",
+        "react": "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm",
+        "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm",
+        "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/dist/react-dom.client.production.min.js"
+      }
+    }
+  </script>
   <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@13/build/esm/styles.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -330,7 +347,16 @@ async function handleGet(req, res, next, filePath, routePath) {
     let data = {};
     if (routeModule.loader) {
       data = await routeModule.loader(context);
-      if (data?.redirect) return res.redirect(303, data.redirect);
+      if (data?.redirect) {
+        // For embedded app routes, handle redirects on client-side to maintain iframe context
+        if (isAppRoute && req.query.shop) {
+          // Pass redirect info to client for App Bridge navigation
+          data.__redirect = data.redirect;
+        } else {
+          // For non-embedded routes, use server-side redirect
+          return res.redirect(303, data.redirect);
+        }
+      }
     }
 
     let headData = { title: 'Shopify App', description: '' };
@@ -341,10 +367,20 @@ async function handleGet(req, res, next, filePath, routePath) {
     let html = '';
     if (routeModule.default) {
       const Component = routeModule.default;
-      const element = isAppRoute
-        ? React.createElement(AppProvider, { i18n: {} }, React.createElement(Component, data))
-        : React.createElement(Component, data);
-      html = renderToString(element);
+
+      if (isAppRoute) {
+        // For admin routes, wrap with AppProvider (Polaris)
+        // AppBridgeProvider will be added on client-side hydration
+        const element = React.createElement(
+          AppProvider,
+          { i18n: {} },
+          React.createElement(Component, data)
+        );
+        html = renderToString(element);
+      } else {
+        // Public routes don't need any providers
+        html = renderToString(React.createElement(Component, data));
+      }
     }
 
     const routeName = path.basename(filePath, path.extname(filePath));
@@ -357,7 +393,7 @@ async function handleGet(req, res, next, filePath, routePath) {
 /**
  * Handle POST requests for route actions
  */
-async function handlePost(req, res, next, filePath) {
+async function handlePost(req, res, next, filePath, routePath) {
   try {
     const routeModule = await import(path.resolve(filePath));
 
@@ -369,6 +405,12 @@ async function handlePost(req, res, next, filePath) {
     const result = await routeModule.action(context);
 
     if (result?.redirect) {
+      const isAppRoute = routePath.startsWith('/app');
+      // For embedded app routes, send redirect info as JSON for client-side navigation
+      if (isAppRoute && req.query.shop) {
+        return res.json({ ...result, __clientRedirect: result.redirect });
+      }
+      // For non-embedded routes, use server-side redirect
       return res.redirect(303, result.redirect);
     }
 
