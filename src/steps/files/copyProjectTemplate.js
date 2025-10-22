@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync } from 'child_process';
+import { spawnAndWait } from '../process/spawnWithLogs.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -47,9 +47,11 @@ export async function copyProjectTemplate({ projectDir, templatesDir, projectNam
 export async function installProjectDependencies({ projectDir }) {
   logger.spinner('Installing dependencies');
 
-  execSync('npm install', {
-    cwd: projectDir,
-    stdio: 'ignore'
+  await spawnAndWait({
+    command: 'npm',
+    args: ['install'],
+    options: { cwd: projectDir },
+    errorMessage: 'npm install failed'
   });
 
   logger.succeed('Dependencies installed');

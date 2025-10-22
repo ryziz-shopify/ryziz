@@ -59,7 +59,7 @@ export function tomlToEnvVars(config) {
     SHOPIFY_API_KEY: config.client_id || '',
     SHOPIFY_APP_NAME: config.name || '',
     SHOPIFY_APPLICATION_URL: config.application_url || '',
-    SHOPIFY_HOST: config.application_url || '',
+    SHOPIFY_HOST: config.application_url ? new URL(config.application_url).origin : '',
     SHOPIFY_EMBEDDED: config.embedded ? 'true' : 'false',
     SHOPIFY_SCOPES: config.access_scopes?.scopes || '',
     SHOPIFY_API_VERSION: config.webhooks?.api_version || '2026-01',
@@ -68,35 +68,69 @@ export function tomlToEnvVars(config) {
 
 /**
  * Fetch SHOPIFY_API_SECRET from Shopify CLI
+ * Auto-invokes authentication if needed
  * Self-managed UI: handles spinner and error display
  */
 export async function fetchApiSecret(projectDir) {
   logger.spinner('Fetching API secret');
 
   return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      logger.fail('API secret fetch timeout');
-      resolve(null);
-    }, 30000);
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        proc.kill();
+        logger.fail('API secret fetch timeout');
+        resolve(null);
+      }
+    }, 10000);
 
     const shopifyBin = getShopifyBinary();
-    const process = spawn(shopifyBin, ['app', 'env', 'show'], {
+    const proc = spawn(shopifyBin, ['app', 'env', 'show'], {
       cwd: projectDir,
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    let stdout = '';
-    let stderr = '';
+    let output = '';
 
-    process.stdout.on('data', (data) => { stdout += data.toString(); });
-    process.stderr.on('data', (data) => { stderr += data.toString(); });
+    const onData = (data) => {
+      output += data.toString();
 
-    process.on('close', (code) => {
-      clearTimeout(timeout);
+      // Detect auth requirement immediately
+      if (!resolved && output.includes('log in to Shopify')) {
+        resolved = true;
+        clearTimeout(timer);
+        proc.kill();
+        logger.fail('Authentication required');
 
-      // Success: extract API secret
+        const authProc = spawn(shopifyBin, ['auth', 'login'], {
+          cwd: projectDir,
+          stdio: 'inherit'
+        });
+
+        authProc.on('close', (authCode) => {
+          if (authCode !== 0) {
+            logger.log(chalk.red('\n✖ Authentication failed\n'));
+            resolve(null);
+            return;
+          }
+
+          // Retry fetch after auth
+          fetchApiSecret(projectDir).then(resolve);
+        });
+      }
+    };
+
+    proc.stdout.on('data', onData);
+    proc.stderr.on('data', onData);
+
+    proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+
       if (code === 0) {
-        const match = stdout.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
+        const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
         if (match?.[1]) {
           logger.succeed('API secret fetched');
           resolve(match[1]);
@@ -105,19 +139,16 @@ export async function fetchApiSecret(projectDir) {
           logger.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local\n'));
           resolve(null);
         }
-        return;
+      } else {
+        logger.fail(output.trim() || 'Shopify CLI command failed');
+        resolve({ error: new Error(output.trim()) });
       }
-
-      // Error: display Shopify CLI output
-      const output = (stdout + stderr).trim();
-      const error = new Error(output || 'Shopify CLI command failed');
-      error.code = code;
-      logger.fail(error.message);
-      resolve({ error });
     });
 
-    process.on('error', () => {
-      clearTimeout(timeout);
+    proc.on('error', () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
       logger.fail('Shopify CLI error');
       resolve(null);
     });
@@ -161,7 +192,7 @@ export async function updateTomlUrls(tomlPath, tunnelUrl) {
     const config = TOML.parse(content);
 
     // Update URLs
-    config.application_url = tunnelUrl;
+    config.application_url = `${tunnelUrl}/app`;
     if (!config.auth) config.auth = {};
     config.auth.redirect_urls = [
       `${tunnelUrl}/auth/callback`,
