@@ -4,14 +4,17 @@ import chalk from 'chalk';
 import { spawn } from 'child_process';
 import { askToLinkShopifyApp } from '../../utils/env-selector.js';
 import { getShopifyBinary } from '../../utils/binary-resolver.js';
+import logger from '../../utils/logger.js';
 
 /**
  * Link Shopify app using Shopify CLI
- * Prompts user first, then runs shopify app config link
+ * Self-managed UI: handles spinner and interactive prompts
  */
 export async function linkShopifyApp({ projectDir, templatesDir }) {
-  console.log(chalk.bold('\n📦 Shopify App Configuration\n'));
+  logger.spinner('Linking Shopify app');
+  logger.stop();  // Stop before interactive prompt
 
+  console.log(chalk.bold('\n📦 Shopify App Configuration\n'));
   const shouldLink = await askToLinkShopifyApp();
 
   if (!shouldLink) {
@@ -28,7 +31,7 @@ export async function linkShopifyApp({ projectDir, templatesDir }) {
     return { linked: false };
   }
 
-  // Run Shopify CLI link using absolute path to shopify binary
+  // Run Shopify CLI link
   console.log(chalk.cyan('\n→ Linking to Shopify app...\n'));
 
   try {

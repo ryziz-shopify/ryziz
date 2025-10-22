@@ -1,12 +1,16 @@
 import path from 'path';
+import chalk from 'chalk';
 import { spawnWithLogs } from '../process/spawnWithLogs.js';
 import { getFirebaseBinary } from '../../utils/binary-resolver.js';
+import logger from '../../utils/logger.js';
 
 /**
  * Start Firebase emulators (Functions, Firestore, Hosting)
- * Waits for "All emulators ready!" signal before resolving
+ * Self-managed UI: handles spinner and status display
  */
 export async function startEmulators({ ryzizDir, envVars = {} }) {
+  logger.spinner('Starting emulators');
+
   // Use absolute path to firebase binary from .ryziz/functions/node_modules
   const firebaseBin = getFirebaseBinary(ryzizDir);
   const emulators = spawnWithLogs({
@@ -23,6 +27,11 @@ export async function startEmulators({ ryzizDir, envVars = {} }) {
   });
 
   await waitForReady(emulators);
+
+  logger.succeed('Emulators started');
+  logger.log(chalk.green('  ✓ Functions:  ') + chalk.gray('http://localhost:6602'));
+  logger.log(chalk.green('  ✓ Firestore:  ') + chalk.gray('http://localhost:6603'));
+  logger.log(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:6601\n'));
 
   return { process: emulators };
 }

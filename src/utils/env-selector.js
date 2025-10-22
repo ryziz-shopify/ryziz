@@ -6,15 +6,18 @@ import logger from './logger.js';
 
 /**
  * Select environment from available shopify.app*.toml files
+ * Self-managed UI: handles spinner and interactive prompts
  * @param {string} projectDir - Project directory path
  * @param {boolean} allowSkip - Allow "Skip" option
  * @returns {Promise<string|null>} Selected TOML file path, or null if skipped
  */
 export async function selectEnvironment(projectDir, allowSkip = false) {
+  logger.spinner('Loading configuration');
+
   const tomlFiles = await findShopifyTomlFiles(projectDir);
 
   if (tomlFiles.length === 0) {
-    logger.log(chalk.yellow('\n⚠️  No shopify.app*.toml files found'));
+    logger.fail('No configuration found');
     logger.log(chalk.gray('   Run: npm run link\n'));
     return null;
   }
@@ -22,11 +25,12 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
   // If only one file exists, auto-select it
   if (tomlFiles.length === 1) {
     const envName = getEnvNameFromToml(tomlFiles[0]);
-    logger.log(chalk.green(`\n✓ Auto-detected: ${chalk.cyan(path.basename(tomlFiles[0]))} (${envName})`));
+    logger.succeed(`Auto-detected: ${chalk.cyan(path.basename(tomlFiles[0]))} (${envName})`);
     return tomlFiles[0];
   }
 
-  // Multiple files - show selection prompt
+  // Multiple files - stop spinner before prompt
+  logger.stop();
   logger.log(chalk.cyan('\n🔍 Found multiple environments:'));
 
   const choices = tomlFiles.map(filePath => {
@@ -59,7 +63,7 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
 
   if (answer.tomlFile) {
     const envName = getEnvNameFromToml(answer.tomlFile);
-    logger.log(chalk.green(`✓ Using: ${chalk.cyan(path.basename(answer.tomlFile))} (${envName})`));
+    logger.log(chalk.green(`✓ Using: ${chalk.cyan(path.basename(answer.tomlFile))} (${envName})\n`));
   }
 
   return answer.tomlFile;
@@ -67,6 +71,7 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
 
 /**
  * Ask user if they want to link Shopify app during init
+ * Note: Caller must stop spinner before calling this
  * @returns {Promise<boolean>} True if user wants to link
  */
 export async function askToLinkShopifyApp() {

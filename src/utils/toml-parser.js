@@ -3,7 +3,9 @@ import path from 'path';
 import TOML from 'toml-patch';
 import { glob } from 'glob';
 import { spawn } from 'child_process';
+import chalk from 'chalk';
 import { getShopifyBinary } from './binary-resolver.js';
+import logger from './logger.js';
 
 /**
  * Find all shopify.app*.toml files in a directory
@@ -66,11 +68,16 @@ export function tomlToEnvVars(config) {
 
 /**
  * Fetch SHOPIFY_API_SECRET from Shopify CLI
- * Uses absolute path to shopify binary from ryziz package
+ * Self-managed UI: handles spinner and error display
  */
 export async function fetchApiSecret(projectDir) {
+  logger.spinner('Fetching API secret');
+
   return new Promise((resolve) => {
-    const timeout = setTimeout(() => resolve(null), 30000);
+    const timeout = setTimeout(() => {
+      logger.fail('API secret fetch timeout');
+      resolve(null);
+    }, 30000);
 
     const shopifyBin = getShopifyBinary();
     const process = spawn(shopifyBin, ['app', 'env', 'show'], {
@@ -90,19 +97,28 @@ export async function fetchApiSecret(projectDir) {
       // Success: extract API secret
       if (code === 0) {
         const match = stdout.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
-        resolve(match?.[1] || null);
+        if (match?.[1]) {
+          logger.succeed('API secret fetched');
+          resolve(match[1]);
+        } else {
+          logger.fail('API secret not found');
+          logger.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local\n'));
+          resolve(null);
+        }
         return;
       }
 
-      // Error: throw with Shopify CLI output
+      // Error: display Shopify CLI output
       const output = (stdout + stderr).trim();
       const error = new Error(output || 'Shopify CLI command failed');
       error.code = code;
+      logger.fail(error.message);
       resolve({ error });
     });
 
     process.on('error', () => {
       clearTimeout(timeout);
+      logger.fail('Shopify CLI error');
       resolve(null);
     });
   });

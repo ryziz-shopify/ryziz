@@ -79,8 +79,11 @@ const transformClientCodePlugin = {
 
 /**
  * Build all client bundles for browser
+ * Self-managed UI: handles spinner
  */
 export async function buildClientBundles(ryzizDir) {
+  logger.spinner('Building client bundles');
+
   const publicDir = path.join(ryzizDir, 'public');
   await fs.ensureDir(publicDir);
 
@@ -89,6 +92,8 @@ export async function buildClientBundles(ryzizDir) {
 
   // Build 2: Route bundles
   await buildRouteBundles(ryzizDir, publicDir);
+
+  logger.succeed('Client bundles built');
 }
 
 /**
