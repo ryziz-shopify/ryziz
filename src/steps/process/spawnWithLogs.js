@@ -1,41 +1,13 @@
 import { spawn } from 'child_process';
-import chalk from 'chalk';
 
 /**
- * Spawn a process with integrated logging support
- * Automatically pipes output to logger if provided
+ * Spawn a process with basic error handling
  */
-export function spawnWithLogs({ command, args, options = {}, logger, logName }) {
-  // Log the command being run
-  logger?.logCommand?.(command, args);
-
-  // Create command-specific log stream if logger supports it
-  const logStream = logger?.createCommandLogger?.(logName);
-
-  // Show log file location in verbose mode
-  if (logStream && logger?.getCommandLogFile) {
-    const logFile = logger.getCommandLogFile(logName);
-    logger.log?.(chalk.gray(`📝 Detailed output → ${logFile}\n`));
-  }
-
-  // Spawn the process
+export function spawnWithLogs({ command, args, options = {} }) {
   const proc = spawn(command, args, {
     ...options,
-    stdio: options.stdio || 'pipe' // Default to pipe for logging
+    stdio: options.stdio || 'pipe'
   });
-
-  // Setup logging pipes if logger available
-  if (logger && logStream) {
-    proc.stdout?.on('data', (data) => {
-      logger.logCommandOutput?.(data);
-      logger.logToCommandFile?.(logStream, data);
-    });
-
-    proc.stderr?.on('data', (data) => {
-      logger.logCommandOutput?.(data);
-      logger.logToCommandFile?.(logStream, data);
-    });
-  }
 
   return proc;
 }
@@ -44,8 +16,8 @@ export function spawnWithLogs({ command, args, options = {}, logger, logName }) 
  * Spawn a process and wait for it to complete
  * Returns exit code
  */
-export async function spawnAndWait({ command, args, options, logger, logName, errorMessage }) {
-  const proc = spawnWithLogs({ command, args, options, logger, logName });
+export async function spawnAndWait({ command, args, options, errorMessage }) {
+  const proc = spawnWithLogs({ command, args, options });
 
   return new Promise((resolve, reject) => {
     proc.on('close', (code) => {

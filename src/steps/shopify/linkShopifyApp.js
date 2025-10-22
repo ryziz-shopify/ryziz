@@ -9,8 +9,8 @@ import { getShopifyBinary } from '../../utils/binary-resolver.js';
  * Link Shopify app using Shopify CLI
  * Prompts user first, then runs shopify app config link
  */
-export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
-  logger?.log?.(chalk.bold('\n📦 Shopify App Configuration\n'));
+export async function linkShopifyApp({ projectDir, templatesDir }) {
+  console.log(chalk.bold('\n📦 Shopify App Configuration\n'));
 
   const shouldLink = await askToLinkShopifyApp();
 
@@ -21,15 +21,15 @@ export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
       path.join(projectDir, 'shopify.app.toml')
     );
 
-    logger?.log?.(chalk.gray('\n⏭  Skipped Shopify configuration'));
-    logger?.log?.(chalk.gray('  To link your app later, run:'));
-    logger?.log?.(chalk.cyan('    npm run link\n'));
+    console.log(chalk.gray('\n⏭  Skipped Shopify configuration'));
+    console.log(chalk.gray('  To link your app later, run:'));
+    console.log(chalk.cyan('    npm run link\n'));
 
     return { linked: false };
   }
 
   // Run Shopify CLI link using absolute path to shopify binary
-  logger?.log?.(chalk.cyan('\n→ Linking to Shopify app...\n'));
+  console.log(chalk.cyan('\n→ Linking to Shopify app...\n'));
 
   try {
     const shopifyBin = getShopifyBinary();
@@ -48,15 +48,15 @@ export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
       });
     });
 
-    logger?.log?.(chalk.green('\n✓ Shopify app linked successfully!'));
-    logger?.log?.(chalk.gray('  Environment variables will be pulled when you run: npm run dev\n'));
+    console.log(chalk.green('\n✓ Shopify app linked successfully!'));
+    console.log(chalk.gray('  Environment variables will be pulled when you run: npm run dev\n'));
 
     return { linked: true };
 
   } catch (error) {
-    logger?.log?.(chalk.yellow('\n⚠️  Shopify CLI linking skipped or failed'));
-    logger?.log?.(chalk.gray('  You can link your app later by running:'));
-    logger?.log?.(chalk.cyan('    npm run link\n'));
+    console.log(chalk.yellow('\n⚠️  Shopify CLI linking skipped or failed'));
+    console.log(chalk.gray('  You can link your app later by running:'));
+    console.log(chalk.cyan('    npm run link\n'));
 
     // If linking failed, copy template so user has something to work with
     await fs.copy(

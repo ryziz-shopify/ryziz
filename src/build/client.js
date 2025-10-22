@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { glob } from 'glob';
 import path from 'path';
 import fs from 'fs-extra';
+import logger from '../utils/logger.js';
 import { CodeTransformPipeline, SecurityError, ValidationError, TransformError } from './transforms.js';
 import { securityTransformer, reactGlobalTransformer } from './transformers/index.js';
 import { importValidator } from './validators/index.js';
@@ -164,23 +165,8 @@ async function buildRouteBundle(routeFile, publicDir) {
  * Log transform results in dev mode
  */
 function logTransformResults(metadata, filepath) {
-  if (process.env.NODE_ENV === 'production') {
-    return;
-  }
-
-  const filename = path.basename(filepath);
-
-  if (metadata.security?.removedFunctions?.length > 0) {
-    console.log(
-      `🔒 [Security] Removed ${metadata.security.removedFunctions.length} server functions from ${filename}`
-    );
-  }
-
-  if (metadata['react-global']?.imports?.length > 0) {
-    console.log(
-      `⚛️  [React] Auto-detected ${metadata['react-global'].imports.length} React imports in ${filename}`
-    );
-  }
+  // Transform logging disabled for clean output
+  // Transformations happen silently during build
 }
 
 /**
@@ -188,31 +174,31 @@ function logTransformResults(metadata, filepath) {
  */
 function handleTransformError(error, filepath, source) {
   if (error instanceof SecurityError) {
-    console.error('\n🔒 SECURITY ERROR - BUILD BLOCKED!\n');
-    console.error(error.message);
-    console.error('\nSecrets found:', error.secrets);
+    logger.error('\n🔒 SECURITY ERROR - BUILD BLOCKED!\n');
+    logger.error(error.message);
+    logger.error('\nSecrets found:', error.secrets);
     throw error;
   }
 
   if (error instanceof ValidationError) {
-    console.error('\n❌ VALIDATION ERROR\n');
-    console.error(error.message);
+    logger.error('\n❌ VALIDATION ERROR\n');
+    logger.error(error.message);
     error.errors.forEach(err => {
-      console.error(`  ${err.file}:${err.line} - ${err.message}`);
+      logger.error(`  ${err.file}:${err.line} - ${err.message}`);
     });
     throw error;
   }
 
   if (error instanceof TransformError) {
-    console.error('\n⚠️  TRANSFORM ERROR\n');
-    console.error(`File: ${error.filename}`);
-    console.error(`Error: ${error.message}`);
-    console.error('Cause:', error.cause);
+    logger.error('\n⚠️  TRANSFORM ERROR\n');
+    logger.error(`File: ${error.filename}`);
+    logger.error(`Error: ${error.message}`);
+    logger.error('Cause:', error.cause);
   }
 
   // Unknown error - fallback
-  console.error(`[CRITICAL] Unexpected error transforming ${filepath}:`, error);
-  console.error('Falling back to original source - MAY BE UNSAFE!');
+  logger.error(`[CRITICAL] Unexpected error transforming ${filepath}:`, error);
+  logger.error('Falling back to original source - MAY BE UNSAFE!');
 
   return {
     contents: source,

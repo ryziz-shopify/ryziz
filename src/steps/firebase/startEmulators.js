@@ -1,5 +1,4 @@
 import path from 'path';
-import chalk from 'chalk';
 import { spawnWithLogs } from '../process/spawnWithLogs.js';
 import { getFirebaseBinary } from '../../utils/binary-resolver.js';
 
@@ -7,13 +6,7 @@ import { getFirebaseBinary } from '../../utils/binary-resolver.js';
  * Start Firebase emulators (Functions, Firestore, Hosting)
  * Waits for "All emulators ready!" signal before resolving
  */
-export async function startEmulators({ ryzizDir, envVars = {}, logger }) {
-  logger?.startStep?.('Start Firebase emulators');
-  logger?.log?.(chalk.bold('\n🔥 Starting Firebase emulators...\n'));
-  logger?.log?.(chalk.green('  ✓ Functions:  ') + chalk.gray('http://localhost:6602'));
-  logger?.log?.(chalk.green('  ✓ Firestore:  ') + chalk.gray('http://localhost:6603'));
-  logger?.log?.(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:6601\n'));
-
+export async function startEmulators({ ryzizDir, envVars = {} }) {
   // Use absolute path to firebase binary from .ryziz/functions/node_modules
   const firebaseBin = getFirebaseBinary(ryzizDir);
   const emulators = spawnWithLogs({
@@ -26,15 +19,10 @@ export async function startEmulators({ ryzizDir, envVars = {}, logger }) {
     options: {
       cwd: path.join(ryzizDir, 'functions'),
       env: { ...process.env, ...envVars }
-    },
-    logger,
-    logName: 'firebase-emulators'
+    }
   });
 
-  // Wait for ready signal
-  logger?.verbose?.('Waiting for Firebase emulators to be ready...');
-
-  await waitForReady(emulators, logger);
+  await waitForReady(emulators);
 
   return { process: emulators };
 }
@@ -42,7 +30,7 @@ export async function startEmulators({ ryzizDir, envVars = {}, logger }) {
 /**
  * Wait for emulators to be ready
  */
-async function waitForReady(proc, logger) {
+async function waitForReady(proc) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error('Firebase emulators startup timeout (60s)'));
@@ -52,9 +40,6 @@ async function waitForReady(proc, logger) {
       const output = data.toString();
       if (output.includes('All emulators ready!')) {
         clearTimeout(timeout);
-        logger?.verbose?.('Detected: "All emulators ready!" signal');
-        logger?.log?.(chalk.green('✓ Firebase emulators ready\n'));
-        logger?.endStep?.('Start Firebase emulators');
         resolve();
       }
     };
