@@ -36,25 +36,17 @@ export async function initCommand() {
   try {
     logger.log(chalk.bold('\n🚀 Initializing Ryziz...\n'));
 
-    // Step 1: Ensure directory is empty
-    logger.spinner('Validating directory');
+    // Step 1: Validate directory (self-managed UI)
     await validateDirectory({ projectDir });
-    logger.succeed();
 
-    // Step 2: Copy project template
-    logger.spinner('Copying template');
+    // Step 2: Copy project template (self-managed UI)
     await copyProjectTemplate({ projectDir, templatesDir, projectName });
-    logger.succeed();
 
-    // Step 3: Install npm dependencies
-    logger.spinner('Installing dependencies');
+    // Step 3: Install npm dependencies (self-managed UI)
     await installProjectDependencies({ projectDir });
-    logger.succeed();
 
-    // Step 4: Configure Shopify connection
-    logger.spinner('Linking Shopify app');
+    // Step 4: Configure Shopify connection (self-managed UI)
     await linkShopifyApp({ projectDir, templatesDir });
-    logger.succeed();
 
     // Display success message
     logger.log(chalk.green('\n✓ Ready!'));
@@ -67,8 +59,7 @@ export async function initCommand() {
 
   } catch (error) {
     // Handle initialization failures gracefully
-    logger.fail('Initialization failed');
-    logger.error(chalk.red('Error:'), error.message);
+    logger.error(chalk.red('\n❌ Error:'), error.message);
     cleanup(1);
   }
 }

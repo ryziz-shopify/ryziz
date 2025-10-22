@@ -49,84 +49,38 @@ export async function devCommand() {
   try {
     logger.log(chalk.bold('\n🚀 Starting dev server...\n'));
 
-    // Step 1: Load Shopify configuration
-    logger.spinner('Loading configuration');
+    // Step 1: Load Shopify configuration (self-managed UI)
     const selectedToml = await selectEnvironment(projectDir, false);
+    if (!selectedToml) shutdown(1);
 
-    if (!selectedToml) {
-      logger.fail('No configuration found');
-      logger.log(chalk.gray('   Run: npm run link'));
-      shutdown(1);
-    }
-    logger.succeed();
-
-    // Step 2: Retrieve Shopify API secret
-    logger.spinner('Fetching API secret');
+    // Step 2: Retrieve Shopify API secret (self-managed UI)
     const apiSecretResult = await fetchApiSecret(projectDir);
-
-    if (apiSecretResult?.error) {
-      logger.fail(apiSecretResult.error.message);
-      shutdown(1);
-    }
-
-    if (!apiSecretResult) {
-      logger.fail('API secret not found');
-      logger.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local'));
-      shutdown(1);
-    }
-
-    logger.succeed();
+    if (apiSecretResult?.error) shutdown(1);
+    if (!apiSecretResult) shutdown(1);
     const apiSecret = apiSecretResult;
 
-    // Step 3: Execute build pipeline
+    // Step 3: Execute build pipeline (self-managed UI)
     const buildSteps = [
-      {
-        message: 'Generating config',
-        action: () => copyTemplateFiles({
-          ryzizDir,
-          templatesDir,
-          projectId: 'demo-project'
-        })
-      },
-      {
-        message: 'Copying source',
-        action: () => copySourceFiles({ projectDir, ryzizDir })
-      },
-      {
-        message: 'Building client bundles',
-        action: () => buildClientBundles(ryzizDir),
-        optional: true
-      },
-      {
-        message: 'Building JSX',
-        action: () => buildJSX({ ryzizDir }),
-        optional: true
-      },
-      {
-        message: 'Installing dependencies',
-        action: () => installDependencies({ ryzizDir }),
-        optional: true
-      }
+      { action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId: 'demo-project' }) },
+      { action: () => copySourceFiles({ projectDir, ryzizDir }) },
+      { action: () => buildClientBundles(ryzizDir), optional: true },
+      { action: () => buildJSX({ ryzizDir }), optional: true },
+      { action: () => installDependencies({ ryzizDir }), optional: true }
     ];
 
     for (const step of buildSteps) {
-      logger.spinner(step.message);
       try {
         await step.action();
-        logger.succeed();
       } catch (error) {
-        logger.fail(error.message);
         if (!step.optional) throw error;
         logger.log(chalk.yellow('  Will retry on file save'));
       }
     }
 
-    // Step 4: Initialize Cloudflare tunnel
-    logger.spinner('Starting tunnel');
+    // Step 4: Initialize Cloudflare tunnel (self-managed UI)
     const cloudflareResult = await startCloudflare();
     tunnelProcess = cloudflareResult.process;
     const tunnelUrl = cloudflareResult.tunnelUrl;
-    logger.succeed();
 
     // Configure Shopify app URLs with tunnel endpoint
     await updateTomlUrls(selectedToml, tunnelUrl);
@@ -139,14 +93,9 @@ export async function devCommand() {
     });
     showEnvInfo(selectedToml, envVars);
 
-    // Step 6: Launch Firebase emulators
-    logger.spinner('Starting emulators');
+    // Step 6: Launch Firebase emulators (self-managed UI)
     const emulatorResult = await startEmulators({ ryzizDir, envVars });
     emulators = emulatorResult.process;
-    logger.succeed();
-    logger.log(chalk.green('  ✓ Functions:  ') + chalk.gray('http://localhost:6602'));
-    logger.log(chalk.green('  ✓ Firestore:  ') + chalk.gray('http://localhost:6603'));
-    logger.log(chalk.green('  ✓ Hosting:    ') + chalk.gray('http://localhost:6601'));
 
     // Step 8: Setup file watching and hot reload
     const srcRoutesDir = path.join(projectDir, 'src/routes');
@@ -191,7 +140,7 @@ export async function devCommand() {
     // Display success message
     logger.log(chalk.green('\n✓ Ready!'));
     logger.log(chalk.bold('\nApp URL:'));
-    logger.log(chalk.cyan(`  ${tunnelUrl}`));
+    logger.log(chalk.cyan(`  ${tunnelUrl}\n`));
 
     // Monitor and handle child process crashes
     if (tunnelProcess) {
@@ -214,8 +163,7 @@ export async function devCommand() {
 
   } catch (error) {
     // Handle startup failures gracefully
-    logger.fail('Startup failed');
-    logger.error(chalk.red(error.message));
+    logger.error(chalk.red('\n❌ Startup failed:'), error.message);
     shutdown(1);
   }
 }

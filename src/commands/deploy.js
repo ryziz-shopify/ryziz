@@ -45,29 +45,15 @@ export async function deployCommand() {
   logger.log(chalk.bold('\n🚀 Deploying...\n'));
 
   try {
-    // Step 1: Load Shopify configuration
-    logger.spinner('Loading environment');
+    // Step 1: Load Shopify configuration (self-managed UI)
     const selectedToml = await selectEnvironment(projectDir, false);
+    if (!selectedToml) cleanup(1);
 
-    if (!selectedToml) {
-      logger.fail('No configuration found');
-      logger.log(chalk.gray('   Run: npm run link'));
-      cleanup(1);
-    }
-    logger.succeed();
-
-    // Step 2: Retrieve API secret (optional for deploy)
-    logger.spinner('Fetching API secret');
+    // Step 2: Retrieve API secret - optional for deploy (self-managed UI)
     let apiSecret = null;
     const apiSecretResult = await fetchApiSecret(projectDir);
-
-    if (apiSecretResult?.error) {
-      logger.fail(apiSecretResult.error.message);
-    } else if (apiSecretResult) {
+    if (!apiSecretResult?.error && apiSecretResult) {
       apiSecret = apiSecretResult;
-      logger.succeed();
-    } else {
-      logger.succeed();
     }
 
     // Step 3: Setup environment variables
@@ -77,12 +63,10 @@ export async function deployCommand() {
     });
     showEnvInfo(selectedToml, envVars);
 
-    // Step 4: Get or request Firebase project ID
-    logger.spinner('Getting project ID');
+    // Step 4: Get or request Firebase project ID (self-managed UI)
     let projectId = await getProjectId(configPath, ryzizDir);
-    logger.succeed();
 
-    // Step 5-9: Execute production build pipeline
+    // Step 5-9: Execute production build pipeline (self-managed UI)
     await runProductionBuild({
       ryzizDir,
       templatesDir,
@@ -91,42 +75,46 @@ export async function deployCommand() {
       envVars
     });
 
-    // Step 10: Deploy to Firebase
-    logger.spinner(`Deploying to ${projectId}`);
+    // Step 10: Deploy to Firebase (self-managed UI)
     const result = await deployToFirebase({ ryzizDir, projectId });
-    logger.succeed();
 
     // Display success information
     logger.log(chalk.green('\n✓ Deployed!'));
     logger.log(chalk.bold('\nLive at:'));
     logger.log(chalk.cyan(`  ${result.urls.webApp}`));
     logger.log(chalk.gray('\nDashboard:'));
-    logger.log(chalk.gray(`  ${result.urls.console}`));
+    logger.log(chalk.gray(`  ${result.urls.console}\n`));
 
     cleanup(0);
 
   } catch (error) {
     // Handle deployment failures gracefully
-    logger.fail('Deploy failed');
-    logger.error(chalk.red(error.message));
+    logger.error(chalk.red('\n❌ Deploy failed:'), error.message);
     logger.log(chalk.yellow('\nTips:'));
     logger.log(chalk.gray('  firebase login'));
-    logger.log(chalk.gray('  firebase projects:list'));
+    logger.log(chalk.gray('  firebase projects:list\n'));
     cleanup(1);
   }
 }
 
 /**
  * Get Firebase project ID from config or prompt user
+ * Self-managed UI: handles spinner and interactive prompts
  */
 async function getProjectId(configPath, ryzizDir) {
+  logger.spinner('Getting project ID');
+
   // Try to load from saved config
   if (fs.existsSync(configPath)) {
     const config = await fs.readJson(configPath);
     if (config.projectId) {
+      logger.succeed(`Using project: ${chalk.cyan(config.projectId)}`);
       return config.projectId;
     }
   }
+
+  // Need to prompt - stop spinner first
+  logger.stop();
 
   // Prompt user for project ID
   const { projectId } = await inquirer.prompt([{
@@ -139,13 +127,14 @@ async function getProjectId(configPath, ryzizDir) {
   // Save for future deployments
   await fs.ensureDir(ryzizDir);
   await fs.writeJson(configPath, { projectId }, { spaces: 2 });
-  logger.log(chalk.gray('Project ID saved for future deployments'));
+  logger.log(chalk.gray('✓ Project ID saved for future deployments\n'));
 
   return projectId;
 }
 
 /**
  * Run production build pipeline
+ * All steps self-manage their UI
  */
 async function runProductionBuild(config) {
   const { ryzizDir, templatesDir, projectDir, projectId, envVars } = config;
@@ -153,33 +142,10 @@ async function runProductionBuild(config) {
   // Set production mode
   process.env.NODE_ENV = 'production';
 
-  const buildSteps = [
-    {
-      message: 'Preparing build',
-      action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId })
-    },
-    {
-      message: 'Copying source',
-      action: () => copySourceFiles({ projectDir, ryzizDir, envVars })
-    },
-    {
-      message: 'Building client bundles',
-      action: () => buildClientBundles(ryzizDir)
-    },
-    {
-      message: 'Building JSX',
-      action: () => buildJSX({ ryzizDir })
-    },
-    {
-      message: 'Installing dependencies',
-      action: () => installDependencies({ ryzizDir, production: true })
-    }
-  ];
-
-  // Execute each build step
-  for (const buildStep of buildSteps) {
-    logger.spinner(buildStep.message);
-    await buildStep.action();
-    logger.succeed();
-  }
+  // Execute each build step (self-managed UI)
+  await copyTemplateFiles({ ryzizDir, templatesDir, projectId });
+  await copySourceFiles({ projectDir, ryzizDir, envVars });
+  await buildClientBundles(ryzizDir);
+  await buildJSX({ ryzizDir });
+  await installDependencies({ ryzizDir, production: true });
 }

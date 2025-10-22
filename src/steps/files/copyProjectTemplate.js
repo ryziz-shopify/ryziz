@@ -1,12 +1,15 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
+import logger from '../../utils/logger.js';
 
 /**
  * Copy project template files for init command
- * Creates package.json, .gitignore, .env.local.example, and src/
+ * Self-managed UI: handles spinner
  */
 export async function copyProjectTemplate({ projectDir, templatesDir, projectName }) {
+  logger.spinner('Copying template');
+
   // Copy package.json with project name
   const packageJsonTemplate = await fs.readFile(
     path.join(templatesDir, 'package.json'),
@@ -33,17 +36,22 @@ export async function copyProjectTemplate({ projectDir, templatesDir, projectNam
     path.join(projectDir, 'src')
   );
 
+  logger.succeed('Template copied');
   return { success: true };
 }
 
 /**
  * Install npm dependencies for init command
+ * Self-managed UI: handles spinner
  */
 export async function installProjectDependencies({ projectDir }) {
+  logger.spinner('Installing dependencies');
+
   execSync('npm install', {
     cwd: projectDir,
     stdio: 'ignore'
   });
 
+  logger.succeed('Dependencies installed');
   return { success: true };
 }

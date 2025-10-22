@@ -1,10 +1,14 @@
+import chalk from 'chalk';
 import { spawnWithLogs } from '../process/spawnWithLogs.js';
+import logger from '../../utils/logger.js';
 
 /**
  * Start Cloudflare tunnel to expose local server
- * Extracts and returns the public tunnel URL
+ * Self-managed UI: handles spinner and status display
  */
 export async function startCloudflare({ localUrl = 'http://localhost:6601' } = {}) {
+  logger.spinner('Starting tunnel');
+
   const tunnelProcess = spawnWithLogs({
     command: 'npx',
     args: ['cloudflared', 'tunnel', '--url', localUrl],
@@ -12,6 +16,8 @@ export async function startCloudflare({ localUrl = 'http://localhost:6601' } = {
   });
 
   const tunnelUrl = await extractTunnelUrl(tunnelProcess);
+
+  logger.succeed(`Tunnel started: ${chalk.cyan(tunnelUrl)}`);
 
   return { tunnelUrl, process: tunnelProcess };
 }
