@@ -13,6 +13,18 @@ npm run dev
 npm run deploy
 ```
 
+### Verbose Logging
+
+Enable detailed logging with timestamps and step tracking:
+
+```bash
+npx ryziz init --verbose
+npm run dev -- --verbose
+npm run deploy -- --verbose
+```
+
+Logs are saved to `.ryziz/logs/` for debugging.
+
 ## What You Get
 
 Create `src/routes/app/products.jsx` and Polaris just works:

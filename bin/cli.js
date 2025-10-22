@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { initCommand } from '../src/commands/init.js';
 import { devCommand } from '../src/commands/dev.js';
 import { deployCommand } from '../src/commands/deploy.js';
+import { shopifyCommand } from '../src/commands/shopify.js';
 
 // Constants
 const VERSION = '0.0.1';
@@ -29,7 +30,8 @@ program
 program
   .command('init')
   .description('Initialize a new Ryziz project')
-  .action(initCommand);
+  .option('--verbose', 'Enable verbose logging with detailed output')
+  .action((options) => initCommand(options));
 
 program
   .command('dev')
@@ -40,7 +42,14 @@ program
 program
   .command('deploy')
   .description('Deploy to Firebase')
-  .action(deployCommand);
+  .option('--verbose', 'Enable verbose logging with detailed output')
+  .action((options) => deployCommand(options));
+
+program
+  .command('shopify')
+  .description('Run Shopify CLI commands')
+  .option('--link', 'Link project to Shopify app')
+  .action((options) => shopifyCommand(options));
 
 // Step 4: Parse command-line arguments
 program.parse();

@@ -7,6 +7,7 @@ import inquirer from 'inquirer';
 import { buildClientBundles } from '../build/client.js';
 import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
 import { loadEnvVars, fetchApiSecret } from '../utils/toml-parser.js';
+import { createLogger } from '../utils/logger.js';
 
 // Import steps
 import { copyTemplateFiles } from '../steps/files/copyTemplateFiles.js';
@@ -21,50 +22,63 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Deploy application to Firebase hosting and functions
  * Handles production builds and environment configuration
  */
-export async function deployCommand() {
+export async function deployCommand(options = {}) {
   // Initialize configuration
   const projectDir = process.cwd();
   const ryzizDir = path.join(projectDir, '.ryziz');
   const templatesDir = path.join(__dirname, '../../templates/ryziz');
   const configPath = path.join(ryzizDir, 'config.json');
   const spinner = ora();
+  const logger = createLogger(path.join(projectDir, '.ryziz', 'logs'), options.verbose);
 
-  console.log(chalk.bold('\n🚀 Deploying to Firebase...\n'));
+  logger.log(chalk.bold('\n🚀 Deploying to Firebase...\n'));
 
   try {
     // Step 1: Load Shopify configuration
-    console.log(chalk.cyan('🔍 Scanning environments...\n'));
+    logger.startStep('Load Shopify configuration');
+    logger.log(chalk.cyan('🔍 Scanning environments...\n'));
     const selectedToml = await selectEnvironment(projectDir, false);
 
     if (!selectedToml) {
-      console.log(chalk.red('\n❌ No Shopify configuration found'));
-      console.log(chalk.gray('   Run: npx shopify app config link\n'));
+      logger.log(chalk.red('\n❌ No Shopify configuration found'));
+      logger.log(chalk.gray('   Run: npm run link\n'));
+      logger.close();
       process.exit(1);
     }
+    logger.endStep('Load Shopify configuration');
 
     // Step 2: Retrieve API secret (optional for deploy)
-    console.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
+    logger.startStep('Retrieve API secret');
+    logger.log(chalk.cyan('\n🔐 Fetching API secret...\n'));
     let apiSecret = null;
     try {
       apiSecret = await fetchApiSecret(projectDir);
       if (apiSecret) {
-        console.log(chalk.green('\n✓ API secret retrieved'));
+        logger.log(chalk.green('\n✓ API secret retrieved'));
       } else {
-        console.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
+        logger.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
       }
     } catch {
-      console.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
+      logger.log(chalk.yellow('\n⚠️  API secret not found (continuing)'));
     }
+    logger.endStep('Retrieve API secret');
 
     // Step 3: Setup environment variables
+    logger.startStep('Setup environment variables');
     const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
     Object.entries(envVars).forEach(([key, value]) => {
-      if (value) process.env[key] = value;
+      if (value) {
+        process.env[key] = value;
+        logger.logEnvVar(key, value, 'deploy');
+      }
     });
     showEnvInfo(selectedToml, envVars);
+    logger.endStep('Setup environment variables');
 
     // Step 4: Get or request Firebase project ID
-    let projectId = await getProjectId(configPath, ryzizDir);
+    logger.startStep('Get Firebase project ID');
+    let projectId = await getProjectId(configPath, ryzizDir, logger);
+    logger.endStep('Get Firebase project ID');
 
     // Step 5: Execute production build pipeline
     await runProductionBuild(spinner, {
@@ -72,29 +86,36 @@ export async function deployCommand() {
       templatesDir,
       projectDir,
       projectId,
-      envVars
+      envVars,
+      logger
     });
 
     // Step 6: Deploy to Firebase
+    logger.startStep('Deploy to Firebase');
     spinner.start(`Deploying to Firebase project: ${projectId}...`);
-    const result = await deployToFirebase({ ryzizDir, projectId, logger: null });
+    const result = await deployToFirebase({ ryzizDir, projectId, logger });
     spinner.succeed('Deployment completed');
+    logger.endStep('Deploy to Firebase');
 
     // Display success information
-    console.log(chalk.green('\n✅ Deployment successful!\n'));
-    console.log(chalk.bold('Your app is live at:'));
-    console.log(chalk.cyan(`  ${result.urls.webApp}`));
-    console.log(chalk.cyan(`  ${result.urls.firebaseApp}\n`));
-    console.log(chalk.gray('Functions dashboard:'));
-    console.log(chalk.gray(`  ${result.urls.console}\n`));
+    logger.log(chalk.green('\n✅ Deployment successful!\n'));
+    logger.log(chalk.bold('Your app is live at:'));
+    logger.log(chalk.cyan(`  ${result.urls.webApp}`));
+    logger.log(chalk.cyan(`  ${result.urls.firebaseApp}\n`));
+    logger.log(chalk.gray('Functions dashboard:'));
+    logger.log(chalk.gray(`  ${result.urls.console}\n`));
+
+    logger.close();
 
   } catch (error) {
+    logger.endStep('Deploy', false);
     spinner.fail('Deployment failed');
-    console.error(chalk.red(error.message));
-    console.log(chalk.yellow('\nTroubleshooting tips:'));
-    console.log(chalk.gray('  1. Ensure you are logged in: firebase login'));
-    console.log(chalk.gray('  2. Verify project exists: firebase projects:list'));
-    console.log(chalk.gray('  3. Check .env.production has valid credentials'));
+    logger.error(chalk.red(error.message));
+    logger.log(chalk.yellow('\nTroubleshooting tips:'));
+    logger.log(chalk.gray('  1. Ensure you are logged in: firebase login'));
+    logger.log(chalk.gray('  2. Verify project exists: firebase projects:list'));
+    logger.log(chalk.gray('  3. Check .env.production has valid credentials'));
+    logger.close();
     process.exit(1);
   }
 }
@@ -102,11 +123,14 @@ export async function deployCommand() {
 /**
  * Get Firebase project ID from config or prompt user
  */
-async function getProjectId(configPath, ryzizDir) {
+async function getProjectId(configPath, ryzizDir, logger) {
   // Try to load from saved config
   if (fs.existsSync(configPath)) {
     const config = await fs.readJson(configPath);
-    if (config.projectId) return config.projectId;
+    if (config.projectId) {
+      logger.verbose(`Found saved project ID: ${config.projectId}`);
+      return config.projectId;
+    }
   }
 
   // Prompt user for project ID
@@ -120,7 +144,8 @@ async function getProjectId(configPath, ryzizDir) {
   // Save for future deployments
   await fs.ensureDir(ryzizDir);
   await fs.writeJson(configPath, { projectId }, { spaces: 2 });
-  console.log(chalk.gray('Project ID saved for future deployments\n'));
+  logger.log(chalk.gray('Project ID saved for future deployments\n'));
+  logger.logFileOperation('write', configPath);
 
   return projectId;
 }
@@ -129,38 +154,46 @@ async function getProjectId(configPath, ryzizDir) {
  * Run production build pipeline
  */
 async function runProductionBuild(spinner, config) {
-  const { ryzizDir, templatesDir, projectDir, projectId, envVars } = config;
+  const { ryzizDir, templatesDir, projectDir, projectId, envVars, logger } = config;
 
   // Set production mode
   process.env.NODE_ENV = 'production';
+  logger.logEnvVar('NODE_ENV', 'production', 'deploy');
 
   const buildSteps = [
     {
+      name: 'Prepare production build',
       message: 'Preparing production build...',
-      action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId, logger: null })
+      action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId, logger })
     },
     {
+      name: 'Copy source files',
       message: 'Copying source files...',
-      action: () => copySourceFiles({ projectDir, ryzizDir, envVars, logger: null })
+      action: () => copySourceFiles({ projectDir, ryzizDir, envVars, logger })
     },
     {
+      name: 'Build client bundles',
       message: 'Building client bundles for hydration...',
       action: () => buildClientBundles(ryzizDir)
     },
     {
+      name: 'Build JSX files',
       message: 'Building JSX files...',
-      action: () => buildJSX({ ryzizDir, logger: null })
+      action: () => buildJSX({ ryzizDir, logger })
     },
     {
+      name: 'Install production dependencies',
       message: 'Installing production dependencies...',
-      action: () => installDependencies({ ryzizDir, production: true, logger: null })
+      action: () => installDependencies({ ryzizDir, production: true, logger })
     }
   ];
 
   // Execute each build step
   for (const step of buildSteps) {
+    logger.startStep(step.name);
     spinner.start(step.message);
     await step.action();
     spinner.succeed(step.message.replace('...', ''));
+    logger.endStep(step.name);
   }
 }

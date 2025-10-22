@@ -2,14 +2,14 @@ import fs from 'fs-extra';
 import chalk from 'chalk';
 
 /**
- * Validate that directory is empty (except .git and .DS_Store)
+ * Validate that directory is empty (except .git, .DS_Store, and .ryziz)
  * Used for init command to prevent overwriting existing projects
  */
 export async function validateDirectory({ projectDir, logger }) {
   logger?.verbose?.('Checking if directory is empty...');
 
   const files = await fs.readdir(projectDir);
-  const nonGitFiles = files.filter(f => f !== '.git' && f !== '.DS_Store');
+  const nonGitFiles = files.filter(f => f !== '.git' && f !== '.DS_Store' && f !== '.ryziz');
 
   if (nonGitFiles.length > 0) {
     logger?.log?.(chalk.red('\n❌ Current directory is not empty!'));

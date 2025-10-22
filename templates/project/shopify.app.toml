@@ -2,7 +2,7 @@
 # Learn more: https://shopify.dev/docs/apps/tools/cli/configuration
 #
 # To link this project to your Shopify Partner app, run:
-#   npx shopify app config link
+#   npm run link
 #
 # This will populate the client_id and other fields automatically.
 

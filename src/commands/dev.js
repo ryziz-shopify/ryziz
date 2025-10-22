@@ -60,7 +60,7 @@ export async function devCommand(options = {}) {
 
     if (!selectedToml) {
       logger.log(chalk.red('\n❌ No Shopify configuration found'));
-      logger.log(chalk.gray('   Run: npx shopify app config link\n'));
+      logger.log(chalk.gray('   Run: npm run link\n'));
       process.exit(1);
     }
 
@@ -70,7 +70,7 @@ export async function devCommand(options = {}) {
 
     if (!apiSecret) {
       logger.log(chalk.red('\n❌ API secret not found'));
-      logger.log(chalk.gray('   Run: npx shopify app env show\n'));
+      logger.log(chalk.yellow('   You can manually add SHOPIFY_API_SECRET to .env.local\n'));
       process.exit(1);
     }
 

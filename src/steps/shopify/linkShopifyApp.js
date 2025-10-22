@@ -23,13 +23,13 @@ export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
 
     logger?.log?.(chalk.gray('\n⏭  Skipped Shopify configuration'));
     logger?.log?.(chalk.gray('  To link your app later, run:'));
-    logger?.log?.(chalk.cyan('    npx shopify app config link\n'));
+    logger?.log?.(chalk.cyan('    npm run link\n'));
 
     return { linked: false };
   }
 
   // Run Shopify CLI link using absolute path to shopify binary
-  logger?.log?.(chalk.cyan('\n→ Running: shopify app config link\n'));
+  logger?.log?.(chalk.cyan('\n→ Linking to Shopify app...\n'));
 
   try {
     const shopifyBin = getShopifyBinary();
@@ -56,7 +56,7 @@ export async function linkShopifyApp({ projectDir, templatesDir, logger }) {
   } catch (error) {
     logger?.log?.(chalk.yellow('\n⚠️  Shopify CLI linking skipped or failed'));
     logger?.log?.(chalk.gray('  You can link your app later by running:'));
-    logger?.log?.(chalk.cyan('    npx shopify app config link\n'));
+    logger?.log?.(chalk.cyan('    npm run link\n'));
 
     // If linking failed, copy template so user has something to work with
     await fs.copy(

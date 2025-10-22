@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "ryziz dev",
-    "deploy": "ryziz deploy"
+    "deploy": "ryziz deploy",
+    "link": "ryziz shopify --link"
   },
   "dependencies": {
     "ryziz": "github:ryziz-shopify/ryziz",

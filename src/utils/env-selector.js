@@ -14,7 +14,7 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
 
   if (tomlFiles.length === 0) {
     console.log(chalk.yellow('\n⚠️  No shopify.app*.toml files found'));
-    console.log(chalk.gray('   Run: npx shopify app config link\n'));
+    console.log(chalk.gray('   Run: npm run link\n'));
     return null;
   }
 

@@ -7,7 +7,7 @@
 npm install
 
 # Link to Shopify app (if not done during init)
-npx shopify app config link
+npm run link
 
 # Start development
 npm run dev
@@ -82,7 +82,7 @@ Ryziz uses Shopify CLI to manage app configuration and secrets:
 
 ```bash
 # Link to your Shopify Partner app
-npx shopify app config link
+npm run link
 
 # This creates/updates shopify.app.toml with your app info
 # Secrets are automatically pulled when you run: npm run dev
@@ -120,12 +120,17 @@ FEATURE_FLAG_BETA=true
 
 ```bash
 npm run dev
+
+# Or with verbose logging
+npm run dev -- --verbose
 ```
 
 This command:
 1. Selects your environment (if you have multiple `.toml` files)
 2. Pulls latest secrets from Shopify
 3. Starts Firebase Emulators at http://localhost:6601
+
+**Verbose mode** enables detailed logging with timestamps, step tracking, and command output. Logs are saved to `.ryziz/logs/` for debugging.
 
 ### Testing with Shopify
 
@@ -149,12 +154,17 @@ application_url = "https://your-tunnel-url.trycloudflare.com"
 
 ```bash
 npm run deploy
+
+# Or with verbose logging
+npm run deploy -- --verbose
 ```
 
 This command:
 1. Selects your environment (production, staging, etc.)
 2. Pulls latest secrets from Shopify
 3. Builds and deploys to Firebase
+
+**Verbose mode** enables detailed logging to help troubleshoot deployment issues. Logs are saved to `.ryziz/logs/`.
 
 ### First Time Setup
 
@@ -240,7 +250,9 @@ Restart `npm run dev` and clear browser cache
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Local development |
+| `npm run dev -- --verbose` | Development with detailed logging |
 | `npm run deploy` | Deploy to Firebase |
+| `npm run deploy -- --verbose` | Deploy with detailed logging |
 
 ## Next Steps
 
