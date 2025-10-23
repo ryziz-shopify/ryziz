@@ -79,46 +79,26 @@ function createExpressApp(options = {}) {
         <head>
           <meta charset="UTF-8">
           <meta name="shopify-api-key" content="${process.env.SHOPIFY_API_KEY || ''}" />
-          <title>Redirecting...</title>
+          <title>Re-authentication Required</title>
           <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-          <script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
-          <style>
-            body { margin: 0; padding: 0; }
-            #content { max-width: 400px; margin: 0 auto; padding-top: 20vh; }
-          </style>
         </head>
         <body>
-          <div id="content">
-            <s-stack gap="base" align="center">
-              <s-spinner size="small"></s-spinner>
-              <s-text variant="bodyMd">Redirecting...</s-text>
-            </s-stack>
-          </div>
+          <center>
+            <div style="margin-top: 100px; max-width: 600px;">
+              <h1>Re-authentication Required</h1>
+              <h2>For security reasons, please sign in again.</h2>
+              <p>This happens when:</p>
+              <ul style="display: inline-block; text-align: left;">
+                <li>You've been inactive for a while</li>
+                <li>Your session was reset</li>
+                <li>Security settings changed</li>
+              </ul>
+              <p><b>Redirecting now...</b></p>
+              <p>If you are not redirected automatically, <a href="${escapedUri}">click here</a>.</p>
+            </div>
+          </center>
           <script>
-            // Try to open in top window automatically
-            try {
-              open('${escapedUri}', '_top');
-            } catch (e) {
-              console.log('Auto-redirect failed, user interaction required');
-            }
-
-            // Fallback UI after 60 seconds
-            setTimeout(() => {
-              document.getElementById('content').innerHTML = \`
-                <s-page>
-                  <s-box padding="400">
-                    <s-stack gap="large" align="center">
-                      <s-banner tone="warning" hideIcon>
-                        Redirect did not work automatically
-                      </s-banner>
-                      <s-button variant="primary" size="large" onclick="window.open('${escapedUri}', '_top')">
-                        Continue to Authentication
-                      </s-button>
-                    </s-stack>
-                  </s-box>
-                </s-page>
-              \`;
-            }, 60000);
+            setTimeout(function() { open('${escapedUri}', '_top'); }, 100);
           </script>
         </body>
       </html>
