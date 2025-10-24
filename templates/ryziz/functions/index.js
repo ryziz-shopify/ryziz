@@ -75,30 +75,90 @@ function createExpressApp(options = {}) {
 
     res.send(`
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <meta name="shopify-api-key" content="${process.env.SHOPIFY_API_KEY || ''}" />
-          <title>Re-authentication Required</title>
+          <title>Please Sign In Again</title>
           <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+          <style>
+            body {
+              padding: 1rem;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.5;
+              color: #202223;
+            }
+            h1 {
+              font-size: 24px;
+              line-height: 1.2;
+              margin: 0 0 12px 0;
+              font-weight: 600;
+            }
+            h2 {
+              font-size: 20px;
+              line-height: 1.3;
+              margin: 0 0 20px 0;
+              font-weight: normal;
+              color: #6d7175;
+            }
+            p {
+              margin: 0 0 16px 0;
+              line-height: 1.5;
+            }
+            ul {
+              margin: 8px 0 24px 0;
+              padding-left: 24px;
+            }
+            li {
+              margin-bottom: 6px;
+              line-height: 1.4;
+            }
+            li:last-child {
+              margin-bottom: 0;
+            }
+            #redirect-msg {
+              margin-top: 24px;
+              margin-bottom: 8px;
+            }
+            a {
+              color: #2c6ecb;
+              text-decoration: none;
+            }
+            a:hover {
+              text-decoration: underline;
+            }
+            .container {
+              max-width: 600px;
+            }
+          </style>
         </head>
         <body>
-          <center>
-            <div style="margin-top: 100px; max-width: 600px;">
-              <h1>Re-authentication Required</h1>
-              <h2>For security reasons, please sign in again.</h2>
-              <p>This happens when:</p>
-              <ul style="display: inline-block; text-align: left;">
-                <li>You've been inactive for a while</li>
-                <li>Your session was reset</li>
-                <li>Security settings changed</li>
-              </ul>
-              <p><b>Redirecting now...</b></p>
-              <p>If you are not redirected automatically, <a href="${escapedUri}">click here</a>.</p>
-            </div>
-          </center>
+          <div class="container">
+            <h1>Your session has expired</h1>
+            <h2>Please sign in again to continue</h2>
+            <p>This can happen when:</p>
+            <ul>
+              <li>You were away for too long</li>
+              <li>Security settings were updated</li>
+            </ul>
+            <p id="redirect-msg" aria-live="polite" aria-atomic="true">Redirecting in <span id="countdown">5</span> seconds...</p>
+            <p>Not redirecting? <a href="${escapedUri}">Click here</a>.</p>
+          </div>
           <script>
-            setTimeout(function() { open('${escapedUri}', '_top'); }, 100);
+            let seconds = 5;
+            const countdownEl = document.getElementById('countdown');
+            const redirectMsg = document.getElementById('redirect-msg');
+            const interval = setInterval(function() {
+              seconds--;
+              if (seconds > 0) {
+                countdownEl.textContent = seconds;
+              } else {
+                redirectMsg.textContent = 'Redirecting now...';
+                clearInterval(interval);
+                window.open('${escapedUri}', '_top');
+              }
+            }, 1000);
           </script>
         </body>
       </html>
