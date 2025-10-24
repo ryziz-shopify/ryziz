@@ -3,18 +3,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import chokidar from 'chokidar';
-import { buildClientBundles } from '../build/client.js';
-import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
-import { loadEnvVars, updateTomlUrls, fetchApiSecret } from '../utils/toml-parser.js';
+import { Listr } from 'listr2';
+import { selectEnvironment } from '../utils/env-selector.js';
+import { loadEnvVars, updateTomlUrls, getEnvNameFromToml } from '../utils/toml-parser.js';
+
+// Import utilities
+import { createTask, sequential, parallel } from '../utils/listr-helpers.js';
+import { spawnAndWait, spawnWithLogs } from '../steps/process/spawnWithLogs.js';
+import { extractTunnelUrl } from '../utils/tunnel-helpers.js';
+import { getFirebaseBinary } from '../utils/binary-resolver.js';
+import { waitForEmulators } from '../utils/firebase-helpers.js';
 
 // Import steps
-import { copyTemplateFiles } from '../steps/files/copyTemplateFiles.js';
-import { copySourceFiles } from '../steps/files/copySourceFiles.js';
-import { buildJSX } from '../steps/build/buildJSX.js';
-import { installDependencies } from '../steps/firebase/installDependencies.js';
-import { startEmulators } from '../steps/firebase/startEmulators.js';
-import { startCloudflare } from '../steps/tunnel/startCloudflare.js';
-import { deployToPartners } from '../steps/shopify/deployToPartners.js';
+import { createBuildProjectTasks, createJsxBuildTask } from '../steps/build/buildProject.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,55 +47,106 @@ export async function devCommand() {
   process.on('SIGTERM', () => shutdown(0));
 
   try {
-    console.log(chalk.bold('\n🚀 Starting dev server...\n'));
-
-    // Step 1: Load Shopify configuration (self-managed UI)
-    const selectedToml = await selectEnvironment(projectDir, false);
+    // Step 1: Load Shopify configuration (interactive - outside Listr)
+    console.log(chalk.bold('\n📦 Shopify Configuration\n'));
+    const selectedToml = await selectEnvironment(projectDir);
     if (!selectedToml) shutdown(1);
 
-    // Step 2: Retrieve Shopify API secret (self-managed UI)
-    const apiSecretResult = await fetchApiSecret(projectDir);
-    if (apiSecretResult?.error) shutdown(1);
-    if (!apiSecretResult) shutdown(1);
-    const apiSecret = apiSecretResult;
+    // Step 2-7: Non-interactive tasks with Listr
+    console.log(chalk.bold('\n🚀 Starting dev server...\n'));
+    const tasks = new Listr([
+      createTask('Preparing environment', async (ctx, task) => {
+        return parallel(task, [
+          createTask('Building project', (ctx, task) => {
+            return sequential(task, createBuildProjectTasks({ projectDir, ryzizDir, templatesDir }));
+          }),
 
-    // Step 3: Execute build pipeline (self-managed UI)
-    const buildSteps = [
-      { action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId: 'demo-project' }) },
-      { action: () => copySourceFiles({ projectDir, ryzizDir }) },
-      { action: () => buildClientBundles(ryzizDir), optional: true },
-      { action: () => buildJSX({ ryzizDir }), optional: true },
-      { action: () => installDependencies({ ryzizDir }), optional: true }
-    ];
+          createTask('Starting Cloudflare tunnel', async (ctx, task) => {
+            const tunnelProcess = spawnWithLogs({
+              command: 'npx',
+              args: ['cloudflared', 'tunnel', '--url', 'http://localhost:6601'],
+              options: { stdio: ['ignore', 'pipe', 'pipe'] }
+            });
 
-    for (const step of buildSteps) {
-      try {
-        await step.action();
-      } catch (error) {
-        if (!step.optional) throw error;
-        console.log(chalk.yellow('  Will retry on file save'));
-      }
-    }
+            const tunnelUrl = await extractTunnelUrl(tunnelProcess);
 
-    // Step 4: Initialize Cloudflare tunnel (self-managed UI)
-    const cloudflareResult = await startCloudflare();
-    tunnelProcess = cloudflareResult.process;
-    const tunnelUrl = cloudflareResult.tunnelUrl;
+            ctx.tunnelProcess = tunnelProcess;
+            ctx.tunnelUrl = tunnelUrl;
+          })
+        ]);
+      }),
 
-    // Configure Shopify app URLs with tunnel endpoint
-    await updateTomlUrls(selectedToml, tunnelUrl);
-    await deployToPartners({ projectDir });
+      createTask('Loading environment variables', async (ctx) => {
+        // Update TOML file with tunnel URL (write operation)
+        await updateTomlUrls(selectedToml, ctx.tunnelUrl);
 
-    // Step 5: Configure environment variables
-    const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
-    Object.entries(envVars).forEach(([key, value]) => {
-      if (value) process.env[key] = value;
+        // Load env vars from TOML + .env.local (read operation - must run after updateTomlUrls)
+        ctx.envVars = await loadEnvVars(projectDir, selectedToml, ctx.apiSecret);
+
+        // Apply to current process
+        Object.entries(ctx.envVars).forEach(([key, value]) => {
+          if (value) process.env[key] = value;
+        });
+      }),
+
+      createTask('Launching development environment', async (ctx, task) => {
+        return parallel(task, [
+          createTask('Deploying to Partners', async () => {
+            await spawnAndWait({
+              command: 'npx',
+              args: ['shopify', 'app', 'deploy', '--force'],
+              options: { cwd: projectDir },
+              errorMessage: 'Deploy to Partners failed'
+            });
+          }),
+
+          createTask('Starting Firebase emulators', async (ctx, task) => {
+            const firebaseBin = getFirebaseBinary(ryzizDir);
+            const emulators = spawnWithLogs({
+              command: firebaseBin,
+              args: [
+                'emulators:start',
+                '--only', 'functions,firestore,hosting',
+                '--project', 'demo-project'
+              ],
+              options: {
+                cwd: path.join(ryzizDir, 'functions'),
+                env: { ...process.env, ...ctx.envVars }
+              }
+            });
+
+            await waitForEmulators(emulators);
+
+            task.title = 'Firebase emulators started';
+
+            ctx.emulators = emulators;
+          })
+        ]);
+      })
+    ], {
+      rendererOptions: { showTimer: true }
     });
-    showEnvInfo(selectedToml, envVars);
 
-    // Step 6: Launch Firebase emulators (self-managed UI)
-    const emulatorResult = await startEmulators({ ryzizDir, envVars });
-    emulators = emulatorResult.process;
+    const ctx = await tasks.run();
+
+    // Extract from context
+    tunnelProcess = ctx.tunnelProcess;
+    emulators = ctx.emulators;
+    const tunnelUrl = ctx.tunnelUrl;
+    const envVars = ctx.envVars;
+
+    // Show environment info
+    const envName = getEnvNameFromToml(selectedToml);
+    const basename = path.basename(selectedToml);
+
+    console.log(chalk.bold('\n📋 Environment\n'));
+    console.log(`✔  ${basename} ${chalk.gray(`(${envName})`)}`);
+    if (envVars.SHOPIFY_APP_NAME) {
+      console.log(chalk.gray(`   App: ${envVars.SHOPIFY_APP_NAME}`));
+    }
+    if (envVars.SHOPIFY_APPLICATION_URL) {
+      console.log(chalk.gray(`   URL: ${envVars.SHOPIFY_APPLICATION_URL}`));
+    }
 
     // Step 8: Setup file watching and hot reload
     const srcRoutesDir = path.join(projectDir, 'src/routes');
@@ -107,28 +159,33 @@ export async function devCommand() {
 
       // Handle file changes with automatic rebuilding
       const rebuild = async (event, filePath) => {
-        const icons = { change: '♻️', add: '➕', unlink: '➖' };
-        console.log(chalk.cyan(`\n${icons[event]} ${filePath}`));
+        const eventLabels = {
+          change: 'changed',
+          add: 'added',
+          unlink: 'removed'
+        };
 
-        try {
-          if (event !== 'unlink') {
-            // Copy modified/new file and trigger rebuild
-            const src = path.join(srcRoutesDir, filePath);
-            const dest = path.join(ryzizDir, 'functions/src/routes', filePath);
-            await fs.copy(src, dest);
-            await buildJSX({ ryzizDir });
-            await buildClientBundles(ryzizDir);
-          } else {
-            // Clean up removed files
-            const jsxFile = path.join(ryzizDir, 'functions/src/routes', filePath);
-            const jsFile = jsxFile.replace(/\.jsx$/, '.js');
-            await fs.remove(jsxFile);
-            await fs.remove(jsFile);
-          }
-          console.log(chalk.green('✓ Done'));
-        } catch (error) {
-          console.log(chalk.red(`✗ ${error.message}`));
-        }
+        const src = path.join(srcRoutesDir, filePath);
+        const dest = path.join(ryzizDir, 'functions/src/routes', filePath);
+        const jsFile = dest.replace(/\.jsx$/, '.js');
+
+        const tasks = new Listr([
+          event === 'unlink'
+            ? createTask(`${filePath} (${eventLabels[event]})`, (ctx, task) => {
+                return task.newListr([
+                  createTask('Removing JSX file', () => fs.remove(dest)),
+                  createTask('Removing JS file', () => fs.remove(jsFile))
+                ]);
+              })
+            : createTask(`${filePath} (${eventLabels[event]})`, (ctx, task) => {
+                return task.newListr([
+                  createTask('Copying file', () => fs.copy(src, dest)),
+                  createJsxBuildTask(dest)
+                ]);
+              })
+        ]);
+
+        await tasks.run();
       };
 
       watcher.on('change', (file) => rebuild('change', file));
@@ -137,9 +194,10 @@ export async function devCommand() {
     }
 
     // Display success message
-    console.log(chalk.green('\n✓ Ready!'));
-    console.log(chalk.bold('\nApp URL:'));
-    console.log(chalk.cyan(`  ${tunnelUrl}\n`));
+    console.log(chalk.bold('\n🎉 Development Server\n'));
+    console.log(chalk.green('✔  Status: Ready'));
+    console.log(`✔  App URL: ${chalk.cyan(tunnelUrl)}`);
+    console.log('');
 
     // Monitor and handle child process crashes
     if (tunnelProcess) {
@@ -162,7 +220,8 @@ export async function devCommand() {
 
   } catch (error) {
     // Handle startup failures gracefully
-    console.error(chalk.red('\n❌ Startup failed:'), error.message);
+    console.log(chalk.bold('\n❌ Error\n'));
+    console.log(chalk.red('→ ' + error.message));
     shutdown(1);
   }
 }

@@ -98,7 +98,7 @@ export async function buildClientBundles(ryzizDir) {
 /**
  * Build runtime bundle (React + hydration)
  */
-async function buildRuntimeBundle(ryzizDir, publicDir) {
+export async function buildRuntimeBundle(ryzizDir, publicDir) {
   const runtimeTempPath = path.join(ryzizDir, '_runtime.temp.js');
   await fs.writeFile(runtimeTempPath, RUNTIME_CODE);
 
@@ -122,7 +122,7 @@ async function buildRuntimeBundle(ryzizDir, publicDir) {
 /**
  * Build route bundles from JSX source
  */
-async function buildRouteBundles(ryzizDir, publicDir) {
+export async function buildRouteBundles(ryzizDir, publicDir) {
   const srcRoutesDir = path.join(ryzizDir, 'functions/src/routes');
 
   if (!await fs.pathExists(srcRoutesDir)) {

@@ -44,5 +44,4 @@ export async function copyTemplateFiles({
   await fs.writeFile(functionsPackageDest, functionsPackageTemplate);
 
   console.log('Config generated');
-  return { success: true };
 }

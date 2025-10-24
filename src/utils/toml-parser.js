@@ -2,9 +2,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import TOML from 'toml-patch';
 import { glob } from 'glob';
-import chalk from 'chalk';
-import { spawnWithLogs, spawnAndWait } from '../steps/process/spawnWithLogs.js';
-import { getShopifyBinary } from './binary-resolver.js';
 
 /**
  * Find all shopify.app*.toml files in a directory
@@ -63,105 +60,6 @@ export function tomlToEnvVars(config) {
     SHOPIFY_SCOPES: config.access_scopes?.scopes || '',
     SHOPIFY_API_VERSION: config.webhooks?.api_version || '2026-01',
   };
-}
-
-/**
- * Fetch SHOPIFY_API_SECRET from Shopify CLI
- * Auto-invokes authentication if needed
- * Self-managed UI: handles spinner and error display
- */
-export async function fetchApiSecret(projectDir) {
-  console.log('Fetching API secret');
-
-  return new Promise((resolve) => {
-    let resolved = false;
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        proc.kill();
-        console.error('API secret fetch timeout');
-        resolve(null);
-      }
-    }, 10000);
-
-    const shopifyBin = getShopifyBinary();
-    const proc = spawnWithLogs({
-      command: shopifyBin,
-      args: ['app', 'env', 'show'],
-      options: {
-        cwd: projectDir,
-        stdio: ['ignore', 'pipe', 'pipe']
-      }
-    });
-
-    let output = '';
-
-    const onData = (data) => {
-      output += data.toString();
-
-      // Detect auth requirement immediately
-      if (!resolved && output.includes('log in to Shopify')) {
-        resolved = true;
-        clearTimeout(timer);
-        proc.kill();
-        console.error('Authentication required');
-
-        // Handle auth async
-        (async () => {
-          try {
-            await spawnAndWait({
-              command: shopifyBin,
-              args: ['auth', 'login'],
-              options: {
-                cwd: projectDir,
-                stdio: 'inherit'
-              },
-              errorMessage: 'Authentication failed'
-            });
-
-            // Retry fetch after auth
-            const result = await fetchApiSecret(projectDir);
-            resolve(result);
-          } catch (error) {
-            console.log(chalk.red('\n✖ Authentication failed\n'));
-            resolve(null);
-          }
-        })();
-      }
-    };
-
-    proc.stdout.on('data', onData);
-    proc.stderr.on('data', onData);
-
-    proc.on('close', (code) => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timer);
-
-      if (code === 0) {
-        const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
-        if (match?.[1]) {
-          console.log('API secret fetched');
-          resolve(match[1]);
-        } else {
-          console.error('API secret not found');
-          console.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local\n'));
-          resolve(null);
-        }
-      } else {
-        console.error(output.trim() || 'Shopify CLI command failed');
-        resolve({ error: new Error(output.trim()) });
-      }
-    });
-
-    proc.on('error', () => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timer);
-      console.error('Shopify CLI error');
-      resolve(null);
-    });
-  });
 }
 
 /**

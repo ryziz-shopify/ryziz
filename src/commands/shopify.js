@@ -26,9 +26,7 @@ export async function shopifyCommand(options) {
 /**
  * Run shopify app config link
  */
-async function runShopifyConfigLink(projectDir) {
-  console.log(chalk.cyan('\n→ Linking to Shopify app...\n'));
-
+export async function runShopifyConfigLink(projectDir) {
   const shopifyBin = getShopifyBinary();
   await spawnAndWait({
     command: shopifyBin,
@@ -39,8 +37,6 @@ async function runShopifyConfigLink(projectDir) {
     },
     errorMessage: 'Shopify CLI linking failed'
   });
-
-  console.log(chalk.green('\n✓ Shopify app linked successfully!\n'));
 }
 
 /**

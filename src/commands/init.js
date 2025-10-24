@@ -5,12 +5,9 @@ import { Listr } from 'listr2';
 import fs from 'fs-extra';
 
 // Import utilities
-import { createTask } from '../utils/listr-helpers.js';
+import { createTask, parallel } from '../utils/listr-helpers.js';
 import { spawnAndWait } from '../steps/process/spawnWithLogs.js';
-
-// Import steps
-import { validateDirectory } from '../steps/files/validateDirectory.js';
-import { linkShopifyApp } from '../steps/shopify/linkShopifyApp.js';
+import { getShopifyBinary } from '../utils/binary-resolver.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,10 +36,16 @@ export async function initCommand() {
     // Step 1-3: Non-interactive tasks with Listr
     const tasks = new Listr([
       createTask('Validating directory', async () => {
-        await validateDirectory({ projectDir });
+        const files = await fs.readdir(projectDir);
+        const nonGitFiles = files.filter(f => f !== '.git' && f !== '.DS_Store' && f !== '.ryziz');
+
+        if (nonGitFiles.length > 0) {
+          throw new Error('Directory validation failed: Please run this command in an empty directory');
+        }
       }),
+
       createTask('Copying project template', async (_ctx, task) => {
-        return task.newListr([
+        return parallel(task, [
           createTask('Copying package.json', async () => {
             const packageJsonTemplate = await fs.readFile(
               path.join(templatesDir, 'package.json'),
@@ -71,6 +74,7 @@ export async function initCommand() {
           })
         ]);
       }),
+
       createTask('Installing dependencies', async () => {
         await spawnAndWait({
           command: 'npm',
@@ -85,8 +89,20 @@ export async function initCommand() {
 
     await tasks.run();
 
-    // Step 4: Interactive Shopify configuration (runs outside Listr for stdio: 'inherit')
-    await linkShopifyApp({ projectDir, templatesDir });
+    // Step 4: Link to Shopify app
+    console.log(chalk.bold('\n📦 Shopify App Configuration\n'));
+    console.log(chalk.cyan('→ Linking to Shopify app...\n'));
+
+    const shopifyBin = getShopifyBinary();
+    await spawnAndWait({
+      command: shopifyBin,
+      args: ['app', 'config', 'link'],
+      options: {
+        cwd: projectDir,
+        stdio: 'inherit'
+      },
+      errorMessage: 'Shopify CLI linking failed'
+    });
 
     // Success message
     console.log(chalk.bold('\n⭐ Setup complete\n'));
@@ -99,7 +115,8 @@ export async function initCommand() {
 
   } catch (error) {
     // Single error handler
-    console.error(chalk.red('\n❌ Error:'), error.message);
+    console.log(chalk.bold('\n❌ Error\n'));
+    console.log(chalk.red('→ ' + error.message));
     process.exit(1);
   }
 }

@@ -3,6 +3,12 @@
  * Allows step functions to use console.log normally while Listr captures output
  */
 
+// Store original console methods before any patching
+const ORIGINAL_CONSOLE = {
+  log: console.log,
+  error: console.error
+};
+
 /**
  * Synchronous delay using Atomics.wait
  * Note: May not work in main thread - fallback to no delay if fails
@@ -22,20 +28,19 @@ function syncDelay(ms) {
  * Step functions work with console.log, output is captured by Listr automatically
  */
 export function createTask(title, taskFn, options = {}) {
+  const { rendererOptions = {}, ...listrOptions } = options;
+
   return {
+    ...listrOptions,
     title,
     task: async (ctx, task) => {
-      // Store original console methods
-      const originalLog = console.log;
-      const originalError = console.error;
-
       // Redirect console output to Listr task.output
       console.log = (...args) => {
         const message = args.map(arg =>
           typeof arg === 'string' ? arg : JSON.stringify(arg)
         ).join(' ');
         task.output = message;
-        syncDelay(150); // Small delay for readability
+        syncDelay(500); // Small delay for readability
       };
 
       console.error = (...args) => {
@@ -43,20 +48,34 @@ export function createTask(title, taskFn, options = {}) {
           typeof arg === 'string' ? arg : JSON.stringify(arg)
         ).join(' ');
         task.output = message;
-        syncDelay(150); // Small delay for readability
+        syncDelay(500); // Small delay for readability
       };
 
       try {
         return await taskFn(ctx, task);
       } finally {
-        // Always restore original console methods
-        console.log = originalLog;
-        console.error = originalError;
+        // Always restore to global original console (not local copy which might be patched)
+        console.log = ORIGINAL_CONSOLE.log;
+        console.error = ORIGINAL_CONSOLE.error;
       }
     },
-    options: {
-      persistentOutput: true,
-      ...options
+    rendererOptions: {
+      bottomBar: Infinity,
+      ...rendererOptions
     }
   };
+}
+
+/**
+ * Create sequential sub-tasks (run one after another)
+ */
+export function sequential(task, tasks) {
+  return task.newListr(tasks, { concurrent: false });
+}
+
+/**
+ * Create parallel sub-tasks (run simultaneously)
+ */
+export function parallel(task, tasks) {
+  return task.newListr(tasks, { concurrent: true });
 }

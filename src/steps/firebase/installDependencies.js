@@ -23,5 +23,4 @@ export async function installDependencies({
   });
 
   console.log('Dependencies installed');
-  return { success: true };
 }

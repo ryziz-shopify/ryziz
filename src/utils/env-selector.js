@@ -7,30 +7,25 @@ import { findShopifyTomlFiles, getEnvNameFromToml } from './toml-parser.js';
  * Select environment from available shopify.app*.toml files
  * Self-managed UI: handles spinner and interactive prompts
  * @param {string} projectDir - Project directory path
- * @param {boolean} allowSkip - Allow "Skip" option
- * @returns {Promise<string|null>} Selected TOML file path, or null if skipped
+ * @returns {Promise<string|null>} Selected TOML file path, or null if not found
  */
-export async function selectEnvironment(projectDir, allowSkip = false) {
-  console.log('Loading configuration');
-
+export async function selectEnvironment(projectDir) {
   const tomlFiles = await findShopifyTomlFiles(projectDir);
 
   if (tomlFiles.length === 0) {
-    console.error('No configuration found');
-    console.log(chalk.gray('   Run: npm run link\n'));
+    console.log(chalk.yellow('→ No configuration found'));
+    console.log(chalk.gray('→ Run: npm run link\n'));
     return null;
   }
 
   // If only one file exists, auto-select it
   if (tomlFiles.length === 1) {
     const envName = getEnvNameFromToml(tomlFiles[0]);
-    console.log(`Auto-detected: ${chalk.cyan(path.basename(tomlFiles[0]))} (${envName})`);
+    console.log(`✔  ${path.basename(tomlFiles[0])} ${chalk.gray(`(${envName})`)}`);
     return tomlFiles[0];
   }
 
   // Multiple files
-  console.log(chalk.cyan('\n🔍 Found multiple environments:'));
-
   const choices = tomlFiles.map(filePath => {
     const basename = path.basename(filePath);
     const envName = getEnvNameFromToml(filePath);
@@ -41,19 +36,11 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
     };
   });
 
-  if (allowSkip) {
-    choices.push({
-      name: chalk.gray('Skip configuration'),
-      value: null,
-      short: 'Skip'
-    });
-  }
-
   const answer = await inquirer.prompt([
     {
       type: 'list',
       name: 'tomlFile',
-      message: 'Which environment?',
+      message: chalk.reset('Select environment'),
       choices,
       pageSize: 10
     }
@@ -61,49 +48,8 @@ export async function selectEnvironment(projectDir, allowSkip = false) {
 
   if (answer.tomlFile) {
     const envName = getEnvNameFromToml(answer.tomlFile);
-    console.log(chalk.green(`✓ Using: ${chalk.cyan(path.basename(answer.tomlFile))} (${envName})\n`));
+    console.log(`✔  ${path.basename(answer.tomlFile)} ${chalk.gray(`(${envName})`)}\n`);
   }
 
   return answer.tomlFile;
-}
-
-/**
- * Ask user if they want to link Shopify app during init
- * Note: Caller must stop spinner before calling this
- * @returns {Promise<boolean>} True if user wants to link
- */
-export async function askToLinkShopifyApp() {
-  const answer = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'shouldLink',
-      message: chalk.reset('Link this project to a Shopify app?'),
-      default: true
-    }
-  ]);
-
-  return answer.shouldLink;
-}
-
-/**
- * Show environment info
- * @param {string} tomlPath - Path to TOML file
- * @param {object} envVars - Environment variables
- */
-export function showEnvInfo(tomlPath, envVars) {
-  const basename = path.basename(tomlPath);
-  const envName = getEnvNameFromToml(tomlPath);
-
-  console.log(chalk.bold(`\n📋 Environment: ${chalk.cyan(envName)}`));
-  console.log(chalk.gray(`   Config: ${basename}`));
-
-  if (envVars.SHOPIFY_APP_NAME) {
-    console.log(chalk.gray(`   App: ${envVars.SHOPIFY_APP_NAME}`));
-  }
-
-  if (envVars.SHOPIFY_APPLICATION_URL) {
-    console.log(chalk.gray(`   URL: ${envVars.SHOPIFY_APPLICATION_URL}`));
-  }
-
-  console.log('');
 }
