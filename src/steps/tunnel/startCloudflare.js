@@ -5,9 +5,8 @@ import logger from '../../utils/logger.js';
 /**
  * Start Cloudflare tunnel to expose local server
  * Self-managed UI: handles spinner and status display
- * Returns immediately with process and URL promise for parallel execution
  */
-export function startCloudflare({ localUrl = 'http://localhost:6601' } = {}) {
+export async function startCloudflare({ localUrl = 'http://localhost:6601' } = {}) {
   logger.spinner('Starting tunnel');
 
   const tunnelProcess = spawnWithLogs({
@@ -16,13 +15,11 @@ export function startCloudflare({ localUrl = 'http://localhost:6601' } = {}) {
     options: { stdio: ['ignore', 'pipe', 'pipe'] }
   });
 
-  // Return promise immediately for parallel execution
-  const tunnelUrlPromise = extractTunnelUrl(tunnelProcess).then(url => {
-    logger.succeed(`Tunnel started: ${chalk.cyan(url)}`);
-    return url;
-  });
+  const tunnelUrl = await extractTunnelUrl(tunnelProcess);
 
-  return { tunnelUrlPromise, process: tunnelProcess };
+  logger.succeed(`Tunnel started: ${chalk.cyan(tunnelUrl)}`);
+
+  return { tunnelUrl, process: tunnelProcess };
 }
 
 /**

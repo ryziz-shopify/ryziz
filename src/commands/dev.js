@@ -59,18 +59,7 @@ export async function devCommand() {
     if (!apiSecretResult) shutdown(1);
     const apiSecret = apiSecretResult;
 
-    // Step 3: Start tunnel in parallel (non-blocking)
-    const tunnelStart = startCloudflare();
-    tunnelProcess = tunnelStart.process;
-
-    // Add error handling for tunnel promise
-    tunnelStart.tunnelUrlPromise.catch(error => {
-      logger.error(chalk.red('Tunnel failed during startup:'), error.message);
-      shutdown(1);
-    });
-
-    // Step 4: Execute build pipeline (runs in parallel with tunnel)
-    logger.log(chalk.cyan('⚡ Building (parallel with tunnel startup)...\n'));
+    // Step 3: Execute build pipeline (self-managed UI)
     const buildSteps = [
       { action: () => copyTemplateFiles({ ryzizDir, templatesDir, projectId: 'demo-project' }) },
       { action: () => copySourceFiles({ projectDir, ryzizDir }) },
@@ -88,27 +77,27 @@ export async function devCommand() {
       }
     }
 
-    // Step 5: Ensure tunnel URL is ready (should be done by now)
-    logger.spinner('Waiting for tunnel');
-    const tunnelUrl = await tunnelStart.tunnelUrlPromise;
-    logger.succeed('Tunnel ready');
+    // Step 4: Initialize Cloudflare tunnel (self-managed UI)
+    const cloudflareResult = await startCloudflare();
+    tunnelProcess = cloudflareResult.process;
+    const tunnelUrl = cloudflareResult.tunnelUrl;
 
-    // Step 6: Configure Shopify app URLs with tunnel endpoint
+    // Configure Shopify app URLs with tunnel endpoint
     await updateTomlUrls(selectedToml, tunnelUrl);
     await deployToPartners({ projectDir });
 
-    // Step 7: Configure environment variables
+    // Step 5: Configure environment variables
     const envVars = await loadEnvVars(projectDir, selectedToml, apiSecret);
     Object.entries(envVars).forEach(([key, value]) => {
       if (value) process.env[key] = value;
     });
     showEnvInfo(selectedToml, envVars);
 
-    // Step 8: Launch Firebase emulators (self-managed UI)
+    // Step 6: Launch Firebase emulators (self-managed UI)
     const emulatorResult = await startEmulators({ ryzizDir, envVars });
     emulators = emulatorResult.process;
 
-    // Step 9: Setup file watching and hot reload
+    // Step 8: Setup file watching and hot reload
     const srcRoutesDir = path.join(projectDir, 'src/routes');
     if (fs.existsSync(srcRoutesDir)) {
       watcher = chokidar.watch('**/*.jsx', {
