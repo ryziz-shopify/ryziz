@@ -89,8 +89,6 @@ Handle errors at the top level, keep the happy path clean.
 ```javascript
 // ✅ GOOD: Clean try-catch at top level
 export async function initCommand() {
-  const spinner = ora();
-
   try {
     // Happy path - all the main logic
     await validateDirectory();
@@ -100,7 +98,6 @@ export async function initCommand() {
     console.log(chalk.green('✅ Success!'));
   } catch (error) {
     // Single place for error handling
-    spinner.fail('Failed');
     console.error(chalk.red(error.message));
     process.exit(1);
   }
@@ -183,12 +180,12 @@ const buildSteps = [
 ];
 
 for (const step of buildSteps) {
-  spinner.start(step.message);
+  console.log(step.message);
   try {
     await step.action();
-    spinner.succeed();
+    console.log('✓ Done');
   } catch (error) {
-    spinner.fail(error.message);
+    console.error('✗', error.message);
     if (!step.optional) throw error;
   }
 }
@@ -247,7 +244,6 @@ export async function commandName(options = {}) {
 ### Example 1: Clean Initialization (`init.js`)
 ```javascript
 export async function initCommand() {
-  const spinner = ora();
   const projectDir = process.cwd();
   const projectName = path.basename(projectDir);
   const templatesDir = path.join(__dirname, '../../templates/project');
@@ -256,18 +252,17 @@ export async function initCommand() {
     console.log(chalk.bold('\n🚀 Initializing Ryziz project...\n'));
 
     // Step 1: Ensure directory is empty
-    spinner.start('Validating directory...');
+    console.log('Validating directory...');
     await validateDirectory({ projectDir });
-    spinner.succeed('Directory validated');
+    console.log('Directory validated');
 
     // Step 2: Copy project template
-    spinner.start('Copying template files...');
+    console.log('Copying template files...');
     await copyProjectTemplate({ projectDir, templatesDir, projectName });
-    spinner.succeed('Template files copied');
+    console.log('Template files copied');
 
     // ... more steps
   } catch (error) {
-    spinner.fail('Failed to initialize project');
     console.error(chalk.red('\n❌ Error:'), error.message);
     process.exit(1);
   }

@@ -2,10 +2,9 @@ import fs from 'fs-extra';
 import path from 'path';
 import TOML from 'toml-patch';
 import { glob } from 'glob';
-import { spawn } from 'child_process';
 import chalk from 'chalk';
+import { spawnWithLogs, spawnAndWait } from '../steps/process/spawnWithLogs.js';
 import { getShopifyBinary } from './binary-resolver.js';
-import logger from './logger.js';
 
 /**
  * Find all shopify.app*.toml files in a directory
@@ -72,7 +71,7 @@ export function tomlToEnvVars(config) {
  * Self-managed UI: handles spinner and error display
  */
 export async function fetchApiSecret(projectDir) {
-  logger.spinner('Fetching API secret');
+  console.log('Fetching API secret');
 
   return new Promise((resolve) => {
     let resolved = false;
@@ -80,15 +79,19 @@ export async function fetchApiSecret(projectDir) {
       if (!resolved) {
         resolved = true;
         proc.kill();
-        logger.fail('API secret fetch timeout');
+        console.error('API secret fetch timeout');
         resolve(null);
       }
     }, 10000);
 
     const shopifyBin = getShopifyBinary();
-    const proc = spawn(shopifyBin, ['app', 'env', 'show'], {
-      cwd: projectDir,
-      stdio: ['ignore', 'pipe', 'pipe']
+    const proc = spawnWithLogs({
+      command: shopifyBin,
+      args: ['app', 'env', 'show'],
+      options: {
+        cwd: projectDir,
+        stdio: ['ignore', 'pipe', 'pipe']
+      }
     });
 
     let output = '';
@@ -101,23 +104,29 @@ export async function fetchApiSecret(projectDir) {
         resolved = true;
         clearTimeout(timer);
         proc.kill();
-        logger.fail('Authentication required');
+        console.error('Authentication required');
 
-        const authProc = spawn(shopifyBin, ['auth', 'login'], {
-          cwd: projectDir,
-          stdio: 'inherit'
-        });
+        // Handle auth async
+        (async () => {
+          try {
+            await spawnAndWait({
+              command: shopifyBin,
+              args: ['auth', 'login'],
+              options: {
+                cwd: projectDir,
+                stdio: 'inherit'
+              },
+              errorMessage: 'Authentication failed'
+            });
 
-        authProc.on('close', (authCode) => {
-          if (authCode !== 0) {
-            logger.log(chalk.red('\n✖ Authentication failed\n'));
+            // Retry fetch after auth
+            const result = await fetchApiSecret(projectDir);
+            resolve(result);
+          } catch (error) {
+            console.log(chalk.red('\n✖ Authentication failed\n'));
             resolve(null);
-            return;
           }
-
-          // Retry fetch after auth
-          fetchApiSecret(projectDir).then(resolve);
-        });
+        })();
       }
     };
 
@@ -132,15 +141,15 @@ export async function fetchApiSecret(projectDir) {
       if (code === 0) {
         const match = output.match(/SHOPIFY_API_SECRET=([^\s\n]+)/);
         if (match?.[1]) {
-          logger.succeed('API secret fetched');
+          console.log('API secret fetched');
           resolve(match[1]);
         } else {
-          logger.fail('API secret not found');
-          logger.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local\n'));
+          console.error('API secret not found');
+          console.log(chalk.yellow('   Add SHOPIFY_API_SECRET to .env.local\n'));
           resolve(null);
         }
       } else {
-        logger.fail(output.trim() || 'Shopify CLI command failed');
+        console.error(output.trim() || 'Shopify CLI command failed');
         resolve({ error: new Error(output.trim()) });
       }
     });
@@ -149,7 +158,7 @@ export async function fetchApiSecret(projectDir) {
       if (resolved) return;
       resolved = true;
       clearTimeout(timer);
-      logger.fail('Shopify CLI error');
+      console.error('Shopify CLI error');
       resolve(null);
     });
   });

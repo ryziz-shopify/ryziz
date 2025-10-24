@@ -166,35 +166,34 @@ watcher.on('unlink', (file) => rebuild('unlink', file));
 ## Example 4: Build Pipeline
 ### ❌ Before (Repetitive)
 ```javascript
-spinner.start('Generating Firebase configuration...');
+console.log('Generating Firebase configuration...');
 await copyTemplateFiles({
   ryzizDir,
   templatesDir,
-  projectId: 'demo-project',
-  logger
+  projectId: 'demo-project'
 });
-spinner.succeed('Firebase configuration generated');
+console.log('Firebase configuration generated');
 
-spinner.start('Copying source files...');
-await copySourceFiles({ projectDir, ryzizDir, logger });
-spinner.succeed('Source files copied');
+console.log('Copying source files...');
+await copySourceFiles({ projectDir, ryzizDir });
+console.log('Source files copied');
 
-spinner.start('Building client bundles for hydration...');
+console.log('Building client bundles for hydration...');
 try {
   await buildClientBundles(ryzizDir);
-  spinner.succeed('Client bundles built');
+  console.log('Client bundles built');
 } catch (error) {
-  spinner.fail(`Client bundles failed: ${error.message}`);
-  logger.log(chalk.yellow('  Will retry when you save a file\n'));
+  console.error(`Client bundles failed: ${error.message}`);
+  console.log(chalk.yellow('  Will retry when you save a file\n'));
 }
 
-spinner.start('Building JSX files...');
+console.log('Building JSX files...');
 try {
-  await buildJSX({ ryzizDir, logger });
-  spinner.succeed('JSX files built');
+  await buildJSX({ ryzizDir });
+  console.log('JSX files built');
 } catch (error) {
-  spinner.fail(`JSX build failed: ${error.message}`);
-  logger.log(chalk.yellow('  Will retry when you save a file\n'));
+  console.error(`JSX build failed: ${error.message}`);
+  console.log(chalk.yellow('  Will retry when you save a file\n'));
 }
 ```
 
@@ -227,14 +226,14 @@ const buildSteps = [
 ];
 
 for (const step of buildSteps) {
-  spinner.start(step.message);
+  console.log(step.message);
   try {
     await step.action();
-    spinner.succeed();
+    console.log('✓ Done');
   } catch (error) {
-    spinner.fail(error.message);
+    console.error('✗', error.message);
     if (!step.optional) throw error;
-    logger.log(chalk.yellow('  Will retry when you save a file\n'));
+    console.log(chalk.yellow('  Will retry when you save a file\n'));
   }
 }
 ```
@@ -269,8 +268,6 @@ export async function devCommand(options = {}) {
   const projectDir = process.cwd();
   const ryzizDir = path.join(projectDir, '.ryziz');
   const templatesDir = path.join(__dirname, '../../templates/ryziz');
-  const logger = createLogger(path.join(projectDir, '.ryziz', 'logs'), options.verbose);
-  const spinner = ora();
 
   // Track child processes for cleanup
   let tunnelProcess = null;
@@ -311,8 +308,8 @@ export async function devCommand(options = {}) {
 
   } catch (error) {
     // Handle startup failures gracefully
-    spinner.fail('Failed to start');
-    logger.error(chalk.red(error.message));
+    console.error(chalk.red('Failed to start'));
+    console.error(chalk.red(error.message));
     shutdown();
   }
 }

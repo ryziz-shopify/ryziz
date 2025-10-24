@@ -6,7 +6,6 @@ import inquirer from 'inquirer';
 import { buildClientBundles } from '../build/client.js';
 import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
 import { loadEnvVars, fetchApiSecret } from '../utils/toml-parser.js';
-import logger from '../utils/logger.js';
 
 // Import steps
 import { copyTemplateFiles } from '../steps/files/copyTemplateFiles.js';
@@ -34,15 +33,15 @@ export async function deployCommand() {
   };
 
   process.on('SIGINT', () => {
-    logger.log(chalk.yellow('\n⏹  Deployment cancelled'));
+    console.log(chalk.yellow('\n⏹  Deployment cancelled'));
     cleanup(0);
   });
   process.on('SIGTERM', () => {
-    logger.log(chalk.yellow('\n⏹  Deployment terminated'));
+    console.log(chalk.yellow('\n⏹  Deployment terminated'));
     cleanup(0);
   });
 
-  logger.log(chalk.bold('\n🚀 Deploying...\n'));
+  console.log(chalk.bold('\n🚀 Deploying...\n'));
 
   try {
     // Step 1: Load Shopify configuration (self-managed UI)
@@ -79,20 +78,20 @@ export async function deployCommand() {
     const result = await deployToFirebase({ ryzizDir, projectId });
 
     // Display success information
-    logger.log(chalk.green('\n✓ Deployed!'));
-    logger.log(chalk.bold('\nLive at:'));
-    logger.log(chalk.cyan(`  ${result.urls.webApp}`));
-    logger.log(chalk.gray('\nDashboard:'));
-    logger.log(chalk.gray(`  ${result.urls.console}\n`));
+    console.log(chalk.green('\n✓ Deployed!'));
+    console.log(chalk.bold('\nLive at:'));
+    console.log(chalk.cyan(`  ${result.urls.webApp}`));
+    console.log(chalk.gray('\nDashboard:'));
+    console.log(chalk.gray(`  ${result.urls.console}\n`));
 
     cleanup(0);
 
   } catch (error) {
     // Handle deployment failures gracefully
-    logger.error(chalk.red('\n❌ Deploy failed:'), error.message);
-    logger.log(chalk.yellow('\nTips:'));
-    logger.log(chalk.gray('  firebase login'));
-    logger.log(chalk.gray('  firebase projects:list\n'));
+    console.error(chalk.red('\n❌ Deploy failed:'), error.message);
+    console.log(chalk.yellow('\nTips:'));
+    console.log(chalk.gray('  firebase login'));
+    console.log(chalk.gray('  firebase projects:list\n'));
     cleanup(1);
   }
 }
@@ -102,19 +101,16 @@ export async function deployCommand() {
  * Self-managed UI: handles spinner and interactive prompts
  */
 async function getProjectId(configPath, ryzizDir) {
-  logger.spinner('Getting project ID');
+  console.log('Getting project ID');
 
   // Try to load from saved config
   if (fs.existsSync(configPath)) {
     const config = await fs.readJson(configPath);
     if (config.projectId) {
-      logger.succeed(`Using project: ${chalk.cyan(config.projectId)}`);
+      console.log(`Using project: ${chalk.cyan(config.projectId)}`);
       return config.projectId;
     }
   }
-
-  // Need to prompt - stop spinner first
-  logger.stop();
 
   // Prompt user for project ID
   const { projectId } = await inquirer.prompt([{
@@ -127,7 +123,7 @@ async function getProjectId(configPath, ryzizDir) {
   // Save for future deployments
   await fs.ensureDir(ryzizDir);
   await fs.writeJson(configPath, { projectId }, { spaces: 2 });
-  logger.log(chalk.gray('✓ Project ID saved for future deployments\n'));
+  console.log(chalk.gray('✓ Project ID saved for future deployments\n'));
 
   return projectId;
 }

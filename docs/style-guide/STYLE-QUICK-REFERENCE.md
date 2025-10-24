@@ -34,7 +34,6 @@ async function functionName(params) {
 ```javascript
 export async function commandName(options = {}) {
   // Initialize
-  const spinner = ora();
   const config = setupConfig();
 
   try {
@@ -45,7 +44,6 @@ export async function commandName(options = {}) {
 
     console.log(chalk.green('✅ Success!'));
   } catch (error) {
-    spinner.fail('Failed');
     console.error(chalk.red(error.message));
     process.exit(1);
   }
@@ -60,12 +58,12 @@ const buildSteps = [
 ];
 
 for (const step of buildSteps) {
-  spinner.start(step.message);
+  console.log(step.message);
   try {
     await step.action();
-    spinner.succeed();
+    console.log('✓ Done');
   } catch (error) {
-    spinner.fail(error.message);
+    console.error('✗', error.message);
     if (!step.optional) throw error;
   }
 }

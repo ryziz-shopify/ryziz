@@ -6,7 +6,6 @@ import chokidar from 'chokidar';
 import { buildClientBundles } from '../build/client.js';
 import { selectEnvironment, showEnvInfo } from '../utils/env-selector.js';
 import { loadEnvVars, updateTomlUrls, fetchApiSecret } from '../utils/toml-parser.js';
-import logger from '../utils/logger.js';
 
 // Import steps
 import { copyTemplateFiles } from '../steps/files/copyTemplateFiles.js';
@@ -36,7 +35,7 @@ export async function devCommand() {
 
   // Graceful shutdown handler (kills all child processes and exits cleanly)
   const shutdown = (exitCode = 1) => {
-    logger.log(chalk.yellow('\n⏹  Stopping...'));
+    console.log(chalk.yellow('\n⏹  Stopping...'));
     if (tunnelProcess) tunnelProcess.kill();
     if (emulators) emulators.kill();
     if (watcher) watcher.close();
@@ -47,7 +46,7 @@ export async function devCommand() {
   process.on('SIGTERM', () => shutdown(0));
 
   try {
-    logger.log(chalk.bold('\n🚀 Starting dev server...\n'));
+    console.log(chalk.bold('\n🚀 Starting dev server...\n'));
 
     // Step 1: Load Shopify configuration (self-managed UI)
     const selectedToml = await selectEnvironment(projectDir, false);
@@ -73,7 +72,7 @@ export async function devCommand() {
         await step.action();
       } catch (error) {
         if (!step.optional) throw error;
-        logger.log(chalk.yellow('  Will retry on file save'));
+        console.log(chalk.yellow('  Will retry on file save'));
       }
     }
 
@@ -109,7 +108,7 @@ export async function devCommand() {
       // Handle file changes with automatic rebuilding
       const rebuild = async (event, filePath) => {
         const icons = { change: '♻️', add: '➕', unlink: '➖' };
-        logger.log(chalk.cyan(`\n${icons[event]} ${filePath}`));
+        console.log(chalk.cyan(`\n${icons[event]} ${filePath}`));
 
         try {
           if (event !== 'unlink') {
@@ -126,9 +125,9 @@ export async function devCommand() {
             await fs.remove(jsxFile);
             await fs.remove(jsFile);
           }
-          logger.log(chalk.green('✓ Done'));
+          console.log(chalk.green('✓ Done'));
         } catch (error) {
-          logger.log(chalk.red(`✗ ${error.message}`));
+          console.log(chalk.red(`✗ ${error.message}`));
         }
       };
 
@@ -138,15 +137,15 @@ export async function devCommand() {
     }
 
     // Display success message
-    logger.log(chalk.green('\n✓ Ready!'));
-    logger.log(chalk.bold('\nApp URL:'));
-    logger.log(chalk.cyan(`  ${tunnelUrl}\n`));
+    console.log(chalk.green('\n✓ Ready!'));
+    console.log(chalk.bold('\nApp URL:'));
+    console.log(chalk.cyan(`  ${tunnelUrl}\n`));
 
     // Monitor and handle child process crashes
     if (tunnelProcess) {
       tunnelProcess.on('close', (code) => {
         if (code !== 0) {
-          logger.error(chalk.red(`Tunnel crashed (${code})`));
+          console.error(chalk.red(`Tunnel crashed (${code})`));
           shutdown(1);
         }
       });
@@ -155,7 +154,7 @@ export async function devCommand() {
     if (emulators) {
       emulators.on('close', (code) => {
         if (code !== 0) {
-          logger.error(chalk.red(`Emulators crashed (${code})`));
+          console.error(chalk.red(`Emulators crashed (${code})`));
         }
         shutdown(1);
       });
@@ -163,7 +162,7 @@ export async function devCommand() {
 
   } catch (error) {
     // Handle startup failures gracefully
-    logger.error(chalk.red('\n❌ Startup failed:'), error.message);
+    console.error(chalk.red('\n❌ Startup failed:'), error.message);
     shutdown(1);
   }
 }

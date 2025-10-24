@@ -1,6 +1,5 @@
 import fs from 'fs-extra';
 import path from 'path';
-import logger from '../../utils/logger.js';
 
 /**
  * Copy user's source files to .ryziz directory
@@ -11,7 +10,7 @@ export async function copySourceFiles({
   ryzizDir,
   envVars = null
 }) {
-  logger.spinner('Copying source');
+  console.log('Copying source');
 
   let filesCopied = 0;
 
@@ -39,6 +38,6 @@ export async function copySourceFiles({
     await fs.writeFile(path.join(ryzizDir, 'functions/.env'), envContent);
   }
 
-  logger.succeed('Source copied');
+  console.log('Source copied');
   return { filesCopied };
 }

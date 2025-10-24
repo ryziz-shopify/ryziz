@@ -1,7 +1,6 @@
 import chalk from 'chalk';
-import { spawn } from 'child_process';
+import { spawnAndWait } from '../steps/process/spawnWithLogs.js';
 import { getShopifyBinary } from '../utils/binary-resolver.js';
-import logger from '../utils/logger.js';
 
 /**
  * Shopify CLI wrapper command
@@ -19,7 +18,7 @@ export async function shopifyCommand(options) {
     }
 
   } catch (error) {
-    logger.error(chalk.red('\n❌ Error:', error.message));
+    console.error(chalk.red('\n❌ Error:', error.message));
     process.exit(1);
   }
 }
@@ -28,31 +27,27 @@ export async function shopifyCommand(options) {
  * Run shopify app config link
  */
 async function runShopifyConfigLink(projectDir) {
-  logger.log(chalk.cyan('\n→ Linking to Shopify app...\n'));
+  console.log(chalk.cyan('\n→ Linking to Shopify app...\n'));
 
   const shopifyBin = getShopifyBinary();
-  const linkProcess = spawn(shopifyBin, ['app', 'config', 'link'], {
-    cwd: projectDir,
-    stdio: 'inherit'
+  await spawnAndWait({
+    command: shopifyBin,
+    args: ['app', 'config', 'link'],
+    options: {
+      cwd: projectDir,
+      stdio: 'inherit'
+    },
+    errorMessage: 'Shopify CLI linking failed'
   });
 
-  await new Promise((resolve, reject) => {
-    linkProcess.on('close', (code) => {
-      if (code === 0) {
-        logger.log(chalk.green('\n✓ Shopify app linked successfully!\n'));
-        resolve();
-      } else {
-        reject(new Error(`Shopify CLI exited with code ${code}`));
-      }
-    });
-  });
+  console.log(chalk.green('\n✓ Shopify app linked successfully!\n'));
 }
 
 /**
  * Show available Shopify command options
  */
 function showShopifyHelp() {
-  logger.log(chalk.bold('\n📦 Ryziz Shopify Commands\n'));
-  logger.log(chalk.cyan('Available options:\n'));
-  logger.log(chalk.white('  --link') + chalk.gray('     Link project to Shopify app\n'));
+  console.log(chalk.bold('\n📦 Ryziz Shopify Commands\n'));
+  console.log(chalk.cyan('Available options:\n'));
+  console.log(chalk.white('  --link') + chalk.gray('     Link project to Shopify app\n'));
 }

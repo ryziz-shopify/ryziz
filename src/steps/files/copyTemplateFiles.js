@@ -1,6 +1,5 @@
 import fs from 'fs-extra';
 import path from 'path';
-import logger from '../../utils/logger.js';
 
 /**
  * Copy Firebase template files to .ryziz directory
@@ -11,7 +10,7 @@ export async function copyTemplateFiles({
   templatesDir,
   projectId = 'demo-project'
 }) {
-  logger.spinner('Generating config');
+  console.log('Generating config');
 
   // Create directory structure
   await fs.ensureDir(path.join(ryzizDir, 'functions'));
@@ -44,6 +43,6 @@ export async function copyTemplateFiles({
   const functionsPackageDest = path.join(ryzizDir, 'functions/package.json');
   await fs.writeFile(functionsPackageDest, functionsPackageTemplate);
 
-  logger.succeed('Config generated');
+  console.log('Config generated');
   return { success: true };
 }

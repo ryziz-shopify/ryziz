@@ -1,6 +1,5 @@
 import path from 'path';
 import { spawnAndWait } from '../process/spawnWithLogs.js';
-import logger from '../../utils/logger.js';
 
 /**
  * Install npm dependencies in Firebase functions directory
@@ -10,7 +9,7 @@ export async function installDependencies({
   ryzizDir,
   production = false
 }) {
-  logger.spinner('Installing dependencies');
+  console.log('Installing dependencies');
 
   const args = production ? ['install', '--production'] : ['install'];
   const cwd = path.join(ryzizDir, 'functions');
@@ -23,6 +22,6 @@ export async function installDependencies({
     errorMessage: `npm install failed`
   });
 
-  logger.succeed('Dependencies installed');
+  console.log('Dependencies installed');
   return { success: true };
 }

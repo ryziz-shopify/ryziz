@@ -31,25 +31,38 @@ program
   .command('init')
   .description('Initialize a new Ryziz project')
   .option('--verbose', 'Enable verbose logging with detailed output')
-  .action((options) => initCommand(options));
+  .action((options) => {
+    if (options.verbose) process.env.DEBUG = 'true';
+    initCommand();
+  });
 
 program
   .command('dev')
   .description('Start development server with Firebase emulators')
   .option('--verbose', 'Enable verbose logging with detailed output')
-  .action((options) => devCommand(options));
+  .action((options) => {
+    if (options.verbose) process.env.DEBUG = 'true';
+    devCommand();
+  });
 
 program
   .command('deploy')
   .description('Deploy to Firebase')
   .option('--verbose', 'Enable verbose logging with detailed output')
-  .action((options) => deployCommand(options));
+  .action((options) => {
+    if (options.verbose) process.env.DEBUG = 'true';
+    deployCommand();
+  });
 
 program
   .command('shopify')
   .description('Run Shopify CLI commands')
   .option('--link', 'Link project to Shopify app')
-  .action((options) => shopifyCommand(options));
+  .option('--verbose', 'Enable verbose logging with detailed output')
+  .action((options) => {
+    if (options.verbose) process.env.DEBUG = 'true';
+    shopifyCommand(options);
+  });
 
 // Step 4: Parse command-line arguments
 program.parse();

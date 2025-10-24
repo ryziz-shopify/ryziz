@@ -2,7 +2,6 @@ import { build } from 'esbuild';
 import { glob } from 'glob';
 import path from 'path';
 import fs from 'fs-extra';
-import logger from '../utils/logger.js';
 import { CodeTransformPipeline, SecurityError, ValidationError, TransformError } from './transforms.js';
 import { securityTransformer, reactGlobalTransformer } from './transformers/index.js';
 import { importValidator } from './validators/index.js';
@@ -82,7 +81,7 @@ const transformClientCodePlugin = {
  * Self-managed UI: handles spinner
  */
 export async function buildClientBundles(ryzizDir) {
-  logger.spinner('Building client bundles');
+  console.log('Building client bundles');
 
   const publicDir = path.join(ryzizDir, 'public');
   await fs.ensureDir(publicDir);
@@ -93,7 +92,7 @@ export async function buildClientBundles(ryzizDir) {
   // Build 2: Route bundles
   await buildRouteBundles(ryzizDir, publicDir);
 
-  logger.succeed('Client bundles built');
+  console.log('Client bundles built');
 }
 
 /**
@@ -179,31 +178,31 @@ function logTransformResults(metadata, filepath) {
  */
 function handleTransformError(error, filepath, source) {
   if (error instanceof SecurityError) {
-    logger.error('\n🔒 SECURITY ERROR - BUILD BLOCKED!\n');
-    logger.error(error.message);
-    logger.error('\nSecrets found:', error.secrets);
+    console.error('\n🔒 SECURITY ERROR - BUILD BLOCKED!\n');
+    console.error(error.message);
+    console.error('\nSecrets found:', error.secrets);
     throw error;
   }
 
   if (error instanceof ValidationError) {
-    logger.error('\n❌ VALIDATION ERROR\n');
-    logger.error(error.message);
+    console.error('\n❌ VALIDATION ERROR\n');
+    console.error(error.message);
     error.errors.forEach(err => {
-      logger.error(`  ${err.file}:${err.line} - ${err.message}`);
+      console.error(`  ${err.file}:${err.line} - ${err.message}`);
     });
     throw error;
   }
 
   if (error instanceof TransformError) {
-    logger.error('\n⚠️  TRANSFORM ERROR\n');
-    logger.error(`File: ${error.filename}`);
-    logger.error(`Error: ${error.message}`);
-    logger.error('Cause:', error.cause);
+    console.error('\n⚠️  TRANSFORM ERROR\n');
+    console.error(`File: ${error.filename}`);
+    console.error(`Error: ${error.message}`);
+    console.error('Cause:', error.cause);
   }
 
   // Unknown error - fallback
-  logger.error(`[CRITICAL] Unexpected error transforming ${filepath}:`, error);
-  logger.error('Falling back to original source - MAY BE UNSAFE!');
+  console.error(`[CRITICAL] Unexpected error transforming ${filepath}:`, error);
+  console.error('Falling back to original source - MAY BE UNSAFE!');
 
   return {
     contents: source,

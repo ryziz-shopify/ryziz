@@ -2,20 +2,19 @@ import { build } from 'esbuild';
 import { glob } from 'glob';
 import fs from 'fs-extra';
 import path from 'path';
-import logger from '../../utils/logger.js';
 
 /**
  * Build JSX files to JS using esbuild
  * Self-managed UI: handles spinner
  */
 export async function buildJSX({ ryzizDir }) {
-  logger.spinner('Building JSX');
+  console.log('Building JSX');
 
   const srcRoutesDir = path.join(ryzizDir, 'functions/src/routes');
 
   // Exit early if no routes directory
   if (!fs.existsSync(srcRoutesDir)) {
-    logger.succeed('No JSX files to build');
+    console.log('No JSX files to build');
     return { filesBuilt: 0 };
   }
 
@@ -26,7 +25,7 @@ export async function buildJSX({ ryzizDir }) {
   });
 
   if (jsxFiles.length === 0) {
-    logger.succeed('No JSX files to build');
+    console.log('No JSX files to build');
     return { filesBuilt: 0 };
   }
 
@@ -50,6 +49,6 @@ export async function buildJSX({ ryzizDir }) {
     await fs.remove(jsxFile);
   }
 
-  logger.succeed('JSX built');
+  console.log('JSX built');
   return { filesBuilt: jsxFiles.length };
 }
