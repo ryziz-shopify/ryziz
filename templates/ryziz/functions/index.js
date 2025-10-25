@@ -87,7 +87,7 @@ function createExpressApp(options = {}) {
         <body>
           <s-page>
             <s-banner heading="Your session has expired" tone="info">
-              <span id="banner-message">Redirecting in <span id="countdown">5</span> seconds or <a href="${escapedUri}">click here to reload now</a></span>
+              <span id="banner-message">Redirecting in <span id="countdown">5</span> seconds or <a href="${escapedUri}" target="_top">click here to reload now</a></span>
             </s-banner>
           </s-page>
           <script>
