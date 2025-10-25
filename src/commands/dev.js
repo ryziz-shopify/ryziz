@@ -11,7 +11,7 @@ import { loadEnvVars, updateTomlUrls, getEnvNameFromToml } from '../utils/toml-p
 import { createTask, sequential, parallel } from '../utils/listr-helpers.js';
 import { spawnAndWait, spawnWithLogs } from '../steps/process/spawnWithLogs.js';
 import { extractTunnelUrl } from '../utils/tunnel-helpers.js';
-import { getFirebaseBinary } from '../utils/binary-resolver.js';
+import { getFirebaseBinary, getShopifyBinary } from '../utils/binary-resolver.js';
 import { waitForEmulators } from '../utils/firebase-helpers.js';
 
 // Import steps
@@ -92,9 +92,10 @@ export async function devCommand() {
       createTask('Launching development environment', async (ctx, task) => {
         return parallel(task, [
           createTask('Deploying to Partners', async () => {
+            const shopifyBin = getShopifyBinary();
             await spawnAndWait({
-              command: 'npx',
-              args: ['shopify', 'app', 'deploy', '--force'],
+              command: shopifyBin,
+              args: ['app', 'deploy', '--force'],
               options: { cwd: projectDir },
               errorMessage: 'Deploy to Partners failed'
             });
