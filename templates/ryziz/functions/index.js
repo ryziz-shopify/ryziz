@@ -251,7 +251,12 @@ function scanRoutes(dir) {
 
 async function handleRouteRequest(req, res, next, filePath, routePath, shopify) {
   try {
-    const routeModule = await import(path.resolve(filePath));
+    // Cache busting for development: bypass Node.js ESM cache
+    const cacheBuster = process.env.NODE_ENV === 'production'
+      ? ''
+      : `?t=${Date.now()}`;
+
+    const routeModule = await import(path.resolve(filePath) + cacheBuster);
     const isAppRoute = routePath.startsWith('/app');
     const context = createRequestContext(req, res, shopify);
 
@@ -287,7 +292,12 @@ async function handleRouteRequest(req, res, next, filePath, routePath, shopify) 
 
 async function handleRouteAction(req, res, next, filePath, shopify) {
   try {
-    const routeModule = await import(path.resolve(filePath));
+    // Cache busting for development: bypass Node.js ESM cache
+    const cacheBuster = process.env.NODE_ENV === 'production'
+      ? ''
+      : `?t=${Date.now()}`;
+
+    const routeModule = await import(path.resolve(filePath) + cacheBuster);
 
     if (!routeModule.action) {
       return res.status(405).json({ error: 'Method not allowed' });

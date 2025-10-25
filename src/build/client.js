@@ -113,7 +113,7 @@ export async function buildRuntimeBundle(ryzizDir, publicDir) {
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     },
-    logLevel: 'warning'
+    logLevel: 'silent'
   });
 
   await fs.remove(runtimeTempPath);
@@ -143,7 +143,7 @@ export async function buildRouteBundles(ryzizDir, publicDir) {
 /**
  * Build single route bundle
  */
-async function buildRouteBundle(routeFile, publicDir) {
+export async function buildRouteBundle(routeFile, publicDir) {
   const routeName = path.basename(routeFile, '.jsx');
 
   return build({
@@ -161,7 +161,7 @@ async function buildRouteBundle(routeFile, publicDir) {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     },
     treeShaking: true,
-    logLevel: 'warning'
+    logLevel: 'silent'
   });
 }
 
@@ -198,14 +198,12 @@ function handleTransformError(error, filepath, source) {
     console.error(`File: ${error.filename}`);
     console.error(`Error: ${error.message}`);
     console.error('Cause:', error.cause);
+    // Re-throw to fail the build properly
+    throw error;
   }
 
-  // Unknown error - fallback
+  // Unknown error - log and throw to fail the build
   console.error(`[CRITICAL] Unexpected error transforming ${filepath}:`, error);
-  console.error('Falling back to original source - MAY BE UNSAFE!');
 
-  return {
-    contents: source,
-    loader: 'jsx'
-  };
+  throw error;
 }

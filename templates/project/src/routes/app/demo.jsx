@@ -1,11 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import {
   Page, Layout, Card, Button, ButtonGroup, TextField, Select,
-  Checkbox, RadioButton, Stack, Badge, Banner, List, TextStyle, Text,
+  Checkbox, RadioButton, Badge, Banner, List, Text, BlockStack, InlineStack,
   DataTable, ResourceList, ResourceItem, Thumbnail, EmptyState,
   Modal, Toast, Frame, FormLayout, ChoiceList, RangeSlider, Tag,
   Tabs, CalloutCard, DescriptionList, Divider
 } from '@shopify/polaris';
+
+// Stack replacement for backward compatibility
+const Stack = ({ children, vertical, spacing = 'loose' }) => {
+  const Component = vertical ? BlockStack : InlineStack;
+  const gapMap = { tight: '1', loose: '4', extraLoose: '8' };
+  return <Component gap={gapMap[spacing] || '4'}>{children}</Component>;
+};
 
 // Demo data
 const DEMO_PRODUCTS = [

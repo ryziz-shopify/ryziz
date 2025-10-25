@@ -23,7 +23,7 @@ export async function extractApiSecret(proc) {
           reject(new Error('API secret not found in output'));
         }
       } else {
-        reject(new Error('Failed to fetch API secret'));
+        reject(new Error('Please link your Shopify app first: npm run link'));
       }
     });
 

@@ -44,7 +44,7 @@ export async function initCommand() {
         }
       }),
 
-      createTask('Copying project template', async (_ctx, task) => {
+      createTask('Copying project template', (_ctx, task) => {
         return parallel(task, [
           createTask('Copying package.json', async () => {
             const packageJsonTemplate = await fs.readFile(

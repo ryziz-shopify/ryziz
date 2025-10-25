@@ -1,73 +1,46 @@
 import React from 'react';
 
-// Constants
-const SHOP_DOMAIN_PATTERN = '[a-zA-Z0-9][a-zA-Z0-9-]*\\.myshopify\\.com';
-const PLACEHOLDER_SHOP = 'your-store.myshopify.com';
-const EXAMPLE_SHOP = 'awesome-store.myshopify.com';
-
 // Loader function - runs on the server before rendering
 export async function loader({ request, query }) {
-  const { shop } = query;
-
-  if (shop) {
-    return {
-      redirect: `/auth?shop=${shop}`
-    };
-  }
-
   return {
-    shopParam: shop || null
+    timestamp: new Date().toISOString()
   };
 }
 
 // Head metadata
 export async function head() {
   return {
-    title: 'Install Shopify App',
-    description: 'Install our Shopify app to get started'
+    title: 'Welcome to Ryziz',
+    description: 'A simple landing page built with Ryziz'
   };
 }
 
 // React component for the page
-export default function Home({ shopParam }) {
+export default function Home({ timestamp }) {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Welcome to Your Shopify App</h1>
-        <p style={styles.description}>
-          Connect your Shopify store to get started with powerful features and integrations.
-        </p>
+        <h1 style={styles.title}>Hello World!</h1>
+        <p style={styles.subtitle}>Welcome to Ryziz</p>
 
-        <form method="GET" action="/auth" style={styles.form}>
-          <label style={styles.label}>
-            Enter your Shopify store domain:
-          </label>
-          <div style={styles.inputGroup}>
-            <input
-              name="shop"
-              type="text"
-              placeholder={PLACEHOLDER_SHOP}
-              required
-              pattern={SHOP_DOMAIN_PATTERN}
-              style={styles.input}
-              defaultValue={shopParam}
-            />
-            <button type="submit" style={styles.button}>
-              Install App
-            </button>
-          </div>
-          <p style={styles.hint}>
-            Example: {EXAMPLE_SHOP}
+        <div style={styles.infoBox}>
+          <p style={styles.description}>
+            This is a simple landing page template built with Ryziz - a modern framework
+            for building Shopify apps with server-side rendering and React.
           </p>
-        </form>
+
+          <div style={styles.timestamp}>
+            <strong>Server timestamp:</strong> {timestamp}
+          </div>
+        </div>
 
         <div style={styles.features}>
-          <h2 style={styles.featuresTitle}>Features</h2>
+          <h2 style={styles.featuresTitle}>Get Started</h2>
           <ul style={styles.featuresList}>
-            <li>Product management and sync</li>
-            <li>Order tracking and analytics</li>
-            <li>Customer insights</li>
-            <li>Automated workflows</li>
+            <li>Edit <code style={styles.code}>src/routes/index.jsx</code> to customize this page</li>
+            <li>Create new routes by adding files to <code style={styles.code}>src/routes/</code></li>
+            <li>Use the <code style={styles.code}>loader</code> function to fetch server-side data</li>
+            <li>Customize metadata with the <code style={styles.code}>head</code> function</li>
           </ul>
         </div>
       </div>
@@ -82,85 +55,61 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '20px'
+    padding: '20px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
   },
   card: {
     background: 'white',
     borderRadius: '12px',
     padding: '40px',
-    maxWidth: '500px',
+    maxWidth: '600px',
     width: '100%',
     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)'
   },
   title: {
-    fontSize: '28px',
+    fontSize: '48px',
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: '16px',
+    marginBottom: '8px',
     textAlign: 'center'
+  },
+  subtitle: {
+    fontSize: '20px',
+    color: '#667eea',
+    marginBottom: '32px',
+    textAlign: 'center',
+    fontWeight: '500'
+  },
+  infoBox: {
+    background: '#f9fafb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '32px'
   },
   description: {
     fontSize: '16px',
     color: '#666',
-    marginBottom: '32px',
-    textAlign: 'center',
-    lineHeight: '1.6'
+    lineHeight: '1.6',
+    marginBottom: '16px'
   },
-  form: {
-    marginBottom: '32px'
-  },
-  label: {
-    display: 'block',
+  timestamp: {
     fontSize: '14px',
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: '8px'
-  },
-  inputGroup: {
-    display: 'flex',
-    gap: '8px'
-  },
-  input: {
-    flex: '1',
-    padding: '12px 16px',
-    fontSize: '16px',
-    border: '2px solid #e5e7eb',
-    borderRadius: '8px',
-    outline: 'none',
-    transition: 'border-color 0.2s',
-    ':focus': {
-      borderColor: '#667eea'
-    }
-  },
-  button: {
-    padding: '12px 24px',
-    fontSize: '16px',
-    fontWeight: '600',
-    color: 'white',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    ':hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 10px 20px rgba(102, 126, 234, 0.3)'
-    }
-  },
-  hint: {
-    fontSize: '13px',
-    color: '#999',
-    marginTop: '8px'
+    color: '#888',
+    fontFamily: 'monospace',
+    padding: '12px',
+    background: 'white',
+    borderRadius: '6px',
+    border: '1px solid #e5e7eb'
   },
   features: {
     borderTop: '1px solid #e5e7eb',
     paddingTop: '24px'
   },
   featuresTitle: {
-    fontSize: '18px',
+    fontSize: '20px',
     fontWeight: '600',
     color: '#333',
-    marginBottom: '12px'
+    marginBottom: '16px'
   },
   featuresList: {
     listStyle: 'none',
@@ -168,5 +117,13 @@ const styles = {
     margin: '0',
     color: '#666',
     lineHeight: '2'
+  },
+  code: {
+    background: '#f1f5f9',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontFamily: 'monospace',
+    color: '#667eea'
   }
 };

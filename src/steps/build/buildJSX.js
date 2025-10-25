@@ -42,7 +42,7 @@ export async function buildJSX({ ryzizDir }) {
       jsx: 'transform',
       bundle: false,
       sourcemap: true,
-      logLevel: 'error'
+      logLevel: 'silent'
     });
 
     // Remove original .jsx file

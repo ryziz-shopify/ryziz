@@ -15,7 +15,7 @@ import { getFirebaseBinary, getShopifyBinary } from '../utils/binary-resolver.js
 import { waitForEmulators } from '../utils/firebase-helpers.js';
 
 // Import steps
-import { createBuildProjectTasks, createJsxBuildTask } from '../steps/build/buildProject.js';
+import { createBuildProjectTasks, createBuildRouteFileTask } from '../steps/build/buildProject.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -55,7 +55,7 @@ export async function devCommand() {
     // Step 2-7: Non-interactive tasks with Listr
     console.log(chalk.bold('\n🚀 Starting dev server...\n'));
     const tasks = new Listr([
-      createTask('Preparing environment', async (ctx, task) => {
+      createTask('Preparing environment', (ctx, task) => {
         return parallel(task, [
           createTask('Building project', (ctx, task) => {
             return sequential(task, createBuildProjectTasks({ projectDir, ryzizDir, templatesDir }));
@@ -89,7 +89,7 @@ export async function devCommand() {
         });
       }),
 
-      createTask('Launching development environment', async (ctx, task) => {
+      createTask('Launching development environment', (ctx, task) => {
         return parallel(task, [
           createTask('Deploying to Partners', async () => {
             const shopifyBin = getShopifyBinary();
@@ -134,7 +134,7 @@ export async function devCommand() {
     tunnelProcess = ctx.tunnelProcess;
     emulators = ctx.emulators;
     const tunnelUrl = ctx.tunnelUrl;
-    const envVars = ctx.envVars;
+    const envVars = ctx.envVars || {};
 
     // Show environment info
     const envName = getEnvNameFromToml(selectedToml);
@@ -168,22 +168,27 @@ export async function devCommand() {
 
         const src = path.join(srcRoutesDir, filePath);
         const dest = path.join(ryzizDir, 'functions/src/routes', filePath);
+        const destRoutesDir = path.join(ryzizDir, 'functions/src/routes');
         const jsFile = dest.replace(/\.jsx$/, '.js');
+        const routeName = path.basename(filePath, '.jsx');
+        const clientBundle = path.join(ryzizDir, 'public', `${routeName}.client.js`);
+        const publicDir = path.join(ryzizDir, 'public');
 
         const tasks = new Listr([
           event === 'unlink'
             ? createTask(`${filePath} (${eventLabels[event]})`, (ctx, task) => {
-                return task.newListr([
-                  createTask('Removing JSX file', () => fs.remove(dest)),
-                  createTask('Removing JS file', () => fs.remove(jsFile))
-                ]);
-              })
+              return task.newListr([
+                createTask('Removing JSX file', () => fs.remove(dest)),
+                createTask('Removing JS file', () => fs.remove(jsFile)),
+                createTask('Removing client bundle', () => fs.remove(clientBundle))
+              ]);
+            })
             : createTask(`${filePath} (${eventLabels[event]})`, (ctx, task) => {
-                return task.newListr([
-                  createTask('Copying file', () => fs.copy(src, dest)),
-                  createJsxBuildTask(dest)
-                ]);
-              })
+              return task.newListr([
+                createTask('Copying file', () => fs.copy(src, dest)),
+                createBuildRouteFileTask(dest, publicDir, destRoutesDir)
+              ]);
+            })
         ]);
 
         await tasks.run();

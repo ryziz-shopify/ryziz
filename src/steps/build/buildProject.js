@@ -1,32 +1,55 @@
 import fs from 'fs-extra';
 import path from 'path';
-import chalk from 'chalk';
 import { build } from 'esbuild';
 import { glob } from 'glob';
 import { createTask, sequential, parallel } from '../../utils/listr-helpers.js';
 import { spawnWithLogs, spawnAndWait } from '../process/spawnWithLogs.js';
 import { extractApiSecret } from '../../utils/shopify-helpers.js';
 import { getShopifyBinary } from '../../utils/binary-resolver.js';
-import { buildRuntimeBundle, buildRouteBundles } from '../../build/client.js';
+import { buildRuntimeBundle, buildRouteBundle } from '../../build/client.js';
 
 /**
- * Create JSX build task for a single file
+ * Create build route file task
+ * This is the SINGLE SOURCE OF TRUTH for route file building
+ * Used by both initial build and watch rebuild
+ *
+ * CRITICAL ORDER:
+ * 1. Build client bundle (.client.js) - needs .jsx file
+ * 2. Build server JS (.js) - transforms JSX syntax
+ * 3. Clean up .jsx file - MUST be last
  */
-export function createJsxBuildTask(jsxFile) {
-  return createTask(path.basename(jsxFile), async () => {
-    const outfile = jsxFile.replace(/\.jsx$/, '.js');
-    await build({
-      entryPoints: [jsxFile],
-      outfile,
-      format: 'esm',
-      platform: 'node',
-      target: 'node18',
-      jsx: 'transform',
-      bundle: false,
-      sourcemap: true,
-      logLevel: 'error'
-    });
-    await fs.remove(jsxFile);
+export function createBuildRouteFileTask(jsxFile, publicDir, srcRoutesDir) {
+  const jsFile = jsxFile.replace(/\.jsx$/, '.js');
+  // Show relative path from src/routes instead of just basename to avoid duplicates
+  const relativePath = srcRoutesDir ? path.relative(srcRoutesDir, jsxFile) : path.basename(jsxFile);
+
+  return createTask(relativePath, (ctx, task) => {
+    return sequential(task, [
+      createTask('Building client bundle', () =>
+        buildRouteBundle(jsxFile, publicDir)
+      ),
+
+      createTask('Building server JS', () =>
+        build({
+          entryPoints: [jsxFile],
+          outfile: jsFile,
+          format: 'esm',
+          platform: 'node',
+          target: 'node18',
+          jsx: 'transform',
+          bundle: false,
+          sourcemap: true,
+          logLevel: 'silent'
+        })
+      ),
+
+      createTask('Cleaning up JSX file', () =>
+        fs.remove(jsxFile)
+      )
+    ]);
+  }, {
+    // Don't exit entire build if this file fails - continue with other files
+    exitOnError: false
   });
 }
 
@@ -52,9 +75,9 @@ export function createBuildProjectTasks({ projectDir, ryzizDir, templatesDir }) 
 
     createTask('Preparing project files', (ctx, task) => {
       return sequential(task, [
-        createTask('Creating directories', async (ctx, task) => {
-          await fs.ensureDir(path.join(ryzizDir, 'functions'));
-          await fs.ensureDir(path.join(ryzizDir, 'public'));
+        createTask('Creating directories', (ctx, task) => {
+          fs.ensureDirSync(path.join(ryzizDir, 'functions'));
+          fs.ensureDirSync(path.join(ryzizDir, 'public'));
 
           return parallel(task, [
             createTask('Copying functions/index.js', async () => {
@@ -109,40 +132,40 @@ export function createBuildProjectTasks({ projectDir, ryzizDir, templatesDir }) 
       ]);
     }),
 
-    createTask('Building client bundles', async (ctx, task) => {
-      try {
-        const publicDir = path.join(ryzizDir, 'public');
-        await fs.ensureDir(publicDir);
-
-        return parallel(task, [
-          createTask('Building runtime bundle', () =>
-            buildRuntimeBundle(ryzizDir, publicDir)
-          ),
-          createTask('Building route bundles', () =>
-            buildRouteBundles(ryzizDir, publicDir)
-          )
-        ]);
-      } catch (error) {
-        console.log(chalk.yellow('  Will retry on file save'));
-      }
-    }),
-
-    createTask('Building JSX files', async (ctx, task) => {
+    createTask('Building bundles', (ctx, task) => {
+      const publicDir = path.join(ryzizDir, 'public');
       const srcRoutesDir = path.join(ryzizDir, 'functions/src/routes');
 
-      if (!fs.existsSync(srcRoutesDir)) {
-        task.skip('No JSX files');
-        return;
-      }
+      fs.ensureDirSync(publicDir);
 
-      const jsxFiles = await glob('**/*.jsx', { cwd: srcRoutesDir, absolute: true });
+      return sequential(task, [
+        // Step 1: Build runtime bundle (shared React/ReactDOM)
+        createTask('Building runtime bundle', () =>
+          buildRuntimeBundle(ryzizDir, publicDir)
+        ),
 
-      if (jsxFiles.length === 0) {
-        task.skip('No JSX files');
-        return;
-      }
+        // Step 2: Build route files (client bundles + server JS)
+        // Individual files may fail, but build continues thanks to exitOnError: false
+        createTask('Building route files', (ctx, task) => {
+          if (!fs.existsSync(srcRoutesDir)) {
+            task.skip('No route files');
+            return;
+          }
 
-      return parallel(task, jsxFiles.map(createJsxBuildTask));
+          const jsxFiles = glob.sync('**/*.jsx', { cwd: srcRoutesDir, absolute: true });
+
+          if (jsxFiles.length === 0) {
+            task.skip('No route files');
+            return;
+          }
+
+          // Build all route files in parallel
+          // Failed files are marked with ✖ but don't stop the build
+          return parallel(task, jsxFiles.map(jsxFile =>
+            createBuildRouteFileTask(jsxFile, publicDir, srcRoutesDir)
+          ));
+        })
+      ]);
     }),
 
     createTask('Installing dependencies', async () => {

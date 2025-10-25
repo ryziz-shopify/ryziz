@@ -1,0 +1,42 @@
+diff --git a/node_modules/listr2/dist/index.js b/node_modules/listr2/dist/index.js
+index dbf2181..0f3320a 100644
+--- a/node_modules/listr2/dist/index.js
++++ b/node_modules/listr2/dist/index.js
+@@ -835,6 +835,17 @@ var DefaultRenderer = class DefaultRenderer {
+ 		}
+ 		return render.join(EOL);
+ 	}
++	// CUSTOM: Helper to recursively check for failed subtasks (including nested)
++	hasAnyNestedFailedSubtasks(task) {
++		if (!task.hasSubtasks()) return false;
++		for (const subtask of task.subtasks) {
++			// Check immediate subtask
++			if (subtask.hasFailed()) return true;
++			// Recursively check nested subtasks
++			if (this.hasAnyNestedFailedSubtasks(subtask)) return true;
++		}
++		return false;
++	}
+ 	style(task, output = false) {
+ 		const rendererOptions = this.cache.rendererOptions.get(task.id);
+ 		if (task.isSkipped()) {
+@@ -847,7 +858,7 @@ var DefaultRenderer = class DefaultRenderer {
+ 		}
+ 		if (task.hasSubtasks()) {
+ 			if (task.isStarted() || task.isPrompt() && rendererOptions.showSubtasks !== false && !task.subtasks.every((subtask) => !subtask.hasTitle())) return this.logger.icon(ListrDefaultRendererLogLevels.PENDING);
+-			else if (task.isCompleted() && task.subtasks.some((subtask) => subtask.hasFailed())) return this.logger.icon(ListrDefaultRendererLogLevels.COMPLETED_WITH_FAILED_SUBTASKS);
++			else if (task.isCompleted() && this.hasAnyNestedFailedSubtasks(task)) return this.logger.icon(ListrDefaultRendererLogLevels.COMPLETED_WITH_FAILED_SUBTASKS);
+ 			else if (task.hasFailed()) return this.logger.icon(ListrDefaultRendererLogLevels.FAILED_WITH_FAILED_SUBTASKS);
+ 		}
+ 		if (task.isStarted() || task.isPrompt()) return this.logger.icon(ListrDefaultRendererLogLevels.PENDING, !this.options?.lazy && this.spinner.fetch());
+@@ -941,7 +952,9 @@ var DefaultRenderer = class DefaultRenderer {
+ 				else if (task.isSkipped() && rendererOptions.collapseSkips === false && (rendererOptions.showSkipMessage || !rendererOptions.showSubtasks)) output.push(...this.dump(task, level, ListrLogLevels.SKIPPED));
+ 			}
+ 			if (task.isPending() || rendererTaskOptions.persistentOutput) output.push(...this.renderOutputBar(task, level));
+-			if (rendererOptions.showSubtasks !== false && task.hasSubtasks() && (task.isPending() || task.hasFinalized() && !task.hasTitle() || task.isCompleted() && rendererOptions.collapseSubtasks === false && !task.subtasks.some((subtask) => this.cache.rendererOptions.get(subtask.id)?.collapseSubtasks === true) || task.subtasks.some((subtask) => this.cache.rendererOptions.get(subtask.id)?.collapseSubtasks === false) || task.subtasks.some((subtask) => subtask.hasFailed()) || task.subtasks.some((subtask) => subtask.hasRolledBack()))) {
++			// CUSTOM: Don't collapse if any nested subtask has failed
++			const hasNestedFailures = this.hasAnyNestedFailedSubtasks(task);
++			if (rendererOptions.showSubtasks !== false && task.hasSubtasks() && (task.isPending() || task.hasFinalized() && !task.hasTitle() || task.isCompleted() && rendererOptions.collapseSubtasks === false && !task.subtasks.some((subtask) => this.cache.rendererOptions.get(subtask.id)?.collapseSubtasks === true) || task.subtasks.some((subtask) => this.cache.rendererOptions.get(subtask.id)?.collapseSubtasks === false) || hasNestedFailures || task.subtasks.some((subtask) => subtask.hasRolledBack()))) {
+ 				const subtaskLevel = !task.hasTitle() ? level : level + 1;
+ 				const subtaskRender = this.renderer(task.subtasks, subtaskLevel);
+ 				output.push(...subtaskRender);
