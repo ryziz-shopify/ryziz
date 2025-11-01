@@ -1,0 +1,6 @@
+.ryziz/
+
+*-debug*.log
+.firebase/
+.emulator-data/
+firebase-export-*/

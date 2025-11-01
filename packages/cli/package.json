@@ -1,0 +1,15 @@
+{
+  "name": "@ryziz-shopify/cli",
+  "version": "0.1.0",
+  "dependencies": {
+    "commander": "^14.0.2",
+    "esbuild": "^0.25.11",
+    "firebase-tools": "^14.23.0",
+    "glob": "^11.0.3",
+    "listr2": "^9.0.5"
+  },
+  "bin": {
+    "ryziz": "./index.js"
+  },
+  "type": "module"
+}
