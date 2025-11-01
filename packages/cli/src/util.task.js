@@ -1,11 +1,10 @@
 import { Listr } from 'listr2';
 
 export function runTasks(tasks, options = {}) {
-  const listr = new Listr(tasks, {
+  return new Listr(tasks, {
     rendererOptions: { showTimer: true },
     ...options
-  });
-  return listr.run();
+  }).run();
 }
 
 export function createTask(title, fn, options = {}) {
