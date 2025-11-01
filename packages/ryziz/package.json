@@ -2,7 +2,9 @@
   "name": "@ryziz-shopify/ryziz",
   "version": "0.1.0",
   "dependencies": {
-    "@ryziz-shopify/router": "^0.1.0"
+    "@ryziz-shopify/functions": "^0.1.0",
+    "@ryziz-shopify/router": "^0.1.0",
+    "react": "^19.2.0"
   },
   "devDependencies": {
     "@ryziz-shopify/cli": "^0.1.0"

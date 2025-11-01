@@ -3,7 +3,6 @@ import path from 'path';
 import { glob } from 'glob';
 import * as esbuild from 'esbuild';
 import { fileURLToPath } from 'url';
-import { spawnAndWait } from './util.spawn.js';
 
 const RYZIZ_DIR = '.ryziz';
 const OUTDIR = path.join(RYZIZ_DIR, 'functions');
@@ -30,8 +29,7 @@ export default async function build(options = {}) {
       cleanDistPlugin(),
       virtualRoutesPlugin(),
       generatePackageJsonPlugin(functionsPackage),
-      copyFirebaseConfigPlugin(),
-      npmInstallPlugin()
+      copyFirebaseConfigPlugin()
     ]
   };
 
@@ -119,22 +117,6 @@ function copyFirebaseConfigPlugin() {
         const firebasercTarget = path.join(ryzizDir, '.firebaserc');
         if (fs.existsSync(firebasercSource)) {
           fs.copyFileSync(firebasercSource, firebasercTarget);
-        }
-      });
-    }
-  };
-}
-
-function npmInstallPlugin() {
-  return {
-    name: 'npm-install',
-    setup(build) {
-      build.onEnd(async () => {
-        const functionsDir = path.join(process.cwd(), OUTDIR);
-        const nodeModulesPath = path.join(functionsDir, 'node_modules');
-
-        if (!fs.existsSync(nodeModulesPath)) {
-          await spawnAndWait('npm', ['install'], { cwd: functionsDir });
         }
       });
     }

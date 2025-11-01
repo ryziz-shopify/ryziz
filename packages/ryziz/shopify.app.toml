@@ -1,0 +1,20 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "5b375d315a553f0ed46bf437a709e1b9"
+name = "tien-dev-test-2"
+application_url = "https://essay-alex-promoting-payments.trycloudflare.com"
+embedded = true
+
+[webhooks]
+api_version = "2026-01"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = ""
+
+[auth]
+redirect_urls = [
+  "https://essay-alex-promoting-payments.trycloudflare.com/auth/callback",
+  "https://essay-alex-promoting-payments.trycloudflare.com/auth/shopify/callback",
+  "https://essay-alex-promoting-payments.trycloudflare.com/api/auth/callback"
+]

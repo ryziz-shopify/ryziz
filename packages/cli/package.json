@@ -2,11 +2,15 @@
   "name": "@ryziz-shopify/cli",
   "version": "0.1.0",
   "dependencies": {
+    "@inquirer/prompts": "^7.9.0",
+    "@listr2/prompt-adapter-inquirer": "^3.0.5",
+    "@shopify/cli": "^3.86.1",
     "commander": "^14.0.2",
     "esbuild": "^0.25.11",
     "firebase-tools": "^14.23.0",
     "glob": "^11.0.3",
-    "listr2": "^9.0.5"
+    "listr2": "^9.0.5",
+    "toml-patch": "^0.2.3"
   },
   "bin": {
     "ryziz": "./index.js"

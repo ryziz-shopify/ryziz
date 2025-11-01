@@ -41,6 +41,12 @@
 - Helper functions below
 - Hoisting style for readability
 
+## Source of Trust
+- Main entry point (index.js) handles validation and errors
+- Utility functions stay pure, return data only
+- Don't throw errors in utilities
+- One source of trust principle
+
 ## README Structure
 - Use tree format with ├──, │, └── symbols
 - Annotations use ← symbol
