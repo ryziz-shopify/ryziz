@@ -8,6 +8,14 @@
     ],
     "rewrites": [
       {
+        "source": "/auth/**",
+        "function": "auth"
+      },
+      {
+        "source": "/webhook",
+        "function": "webhooks"
+      },
+      {
         "source": "/api/**",
         "function": "api"
       }

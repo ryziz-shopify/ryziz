@@ -1,9 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
-import { parse } from 'toml-patch';
+import { parse, patch } from 'toml-patch';
+import { scanWebhookFiles } from './build.backend.js';
 
 const CACHE_PATH = path.join(process.cwd(), '.ryziz/cache.json');
+const COMPLIANCE_TOPICS = ['customers/data_request', 'customers/redact', 'shop/redact'];
 
 export default async function deployShopify(tunnelUrl, filename) {
   const tomlPath = path.join(process.cwd(), filename);
@@ -11,7 +13,13 @@ export default async function deployShopify(tunnelUrl, filename) {
   const tomlData = parse(tomlContent);
 
   const currentOrigin = new URL(tomlData.application_url).origin;
-  const updatedContent = tomlContent.replaceAll(currentOrigin, tunnelUrl);
+  let updatedContent = tomlContent.replaceAll(currentOrigin, tunnelUrl);
+
+  const webhooks = await scanWebhookFiles();
+  const allTopics = webhooks.map(w => convertTopicFormat(w.topic));
+  const topics = allTopics.filter(t => !COMPLIANCE_TOPICS.includes(t));
+
+  updatedContent = updateWebhooksSection(updatedContent, topics, tunnelUrl, tomlData.webhooks.api_version);
 
   fs.writeFileSync(tomlPath, updatedContent);
 }
@@ -58,4 +66,52 @@ export async function scanShopifyConfigs(skipCache = false) {
   }
 
   return { configs: allConfigs, fromCache: false };
+}
+
+export function readShopifyEnv(filename) {
+  const tomlPath = path.join(process.cwd(), filename);
+  const tomlContent = fs.readFileSync(tomlPath, 'utf8');
+  const tomlData = parse(tomlContent);
+
+  return {
+    SHOPIFY_API_KEY: tomlData.client_id,
+    SHOPIFY_SCOPES: tomlData.access_scopes?.scopes || '',
+  };
+}
+
+function updateWebhooksSection(tomlContent, topics, url, apiVersion) {
+  const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
+  const updated = parse(tomlContent);
+
+  if (isLocalhost) {
+    updated.webhooks = {
+      api_version: apiVersion
+    };
+    return patch(tomlContent, updated);
+  }
+
+  const subscriptions = [
+    {
+      compliance_topics: COMPLIANCE_TOPICS,
+      uri: `${url}/webhook`
+    }
+  ];
+
+  if (topics.length > 0) {
+    subscriptions.push({
+      topics,
+      uri: `${url}/webhook`
+    });
+  }
+
+  updated.webhooks = {
+    api_version: apiVersion,
+    subscriptions
+  };
+
+  return patch(tomlContent, updated);
+}
+
+function convertTopicFormat(topic) {
+  return topic.toLowerCase().replace('_', '/');
 }

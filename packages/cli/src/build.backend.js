@@ -28,6 +28,7 @@ export default async function build(options = {}) {
     plugins: [
       cleanDistPlugin(),
       virtualRoutesPlugin(),
+      virtualWebhooksPlugin(),
       generatePackageJsonPlugin(functionsPackage),
       copyFirebaseConfigPlugin()
     ]
@@ -72,6 +73,29 @@ function virtualRoutesPlugin() {
         const routes = await scanApiFiles();
         return {
           contents: generateRoutesConfig(routes),
+          loader: 'js',
+          resolveDir: process.cwd()
+        };
+      });
+    }
+  };
+}
+
+function virtualWebhooksPlugin() {
+  return {
+    name: 'virtual-webhooks',
+    setup(build) {
+      build.onResolve({ filter: /^\.\/webhooks\.config\.js$/ }, args => {
+        return {
+          path: args.path,
+          namespace: 'virtual-webhooks'
+        };
+      });
+
+      build.onLoad({ filter: /.*/, namespace: 'virtual-webhooks' }, async () => {
+        const webhooks = await scanWebhookFiles();
+        return {
+          contents: generateWebhooksConfig(webhooks),
           loader: 'js',
           resolveDir: process.cwd()
         };
@@ -155,4 +179,36 @@ function generateRoutesConfig(routes) {
   ).join(',\n');
 
   return `${imports}\n\nexport default [\n${array}\n];\n`;
+}
+
+export async function scanWebhookFiles() {
+  const pattern = path.join(process.cwd(), 'src/webhooks.*.js');
+  const files = await glob(pattern);
+
+  return files.map(file => {
+    const absolutePath = path.resolve(file);
+    const content = fs.readFileSync(file, 'utf8');
+    const match = content.match(/export const TOPIC = ['"](.+)['"]/);
+
+    return {
+      file: absolutePath,
+      topic: match ? match[1] : null
+    };
+  }).filter(w => w.topic);
+}
+
+function generateWebhooksConfig(webhooks) {
+  const imports = webhooks.map((w, i) =>
+    `import * as webhook${i} from '${w.file}';`
+  ).join('\n');
+
+  const handlers = webhooks.map((w, i) =>
+    `  [webhook${i}.TOPIC]: {
+    deliveryMethod: 'http',
+    callbackUrl: '/webhook',
+    callback: webhook${i}.handle
+  }`
+  ).join(',\n');
+
+  return `${imports}\n\nexport default {\n${handlers}\n};\n`;
 }

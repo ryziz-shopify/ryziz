@@ -1,5 +1,7 @@
 import { spawn } from 'child_process';
 
+const activeProcesses = new Set();
+
 export async function spawnWithCallback(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
@@ -7,6 +9,8 @@ export async function spawnWithCallback(command, args, options = {}) {
       stdio: ['inherit', 'pipe', 'pipe'],
       ...spawnOptions
     });
+
+    activeProcesses.add(child);
 
     let resolved = false;
     const controls = {
@@ -46,6 +50,7 @@ export async function spawnWithCallback(command, args, options = {}) {
 
     child.on('close', (code) => {
       if (!resolved) {
+        activeProcesses.delete(child);
         if (code === 0) {
           resolve();
         } else {
@@ -56,8 +61,23 @@ export async function spawnWithCallback(command, args, options = {}) {
 
     child.on('error', (err) => {
       if (!resolved) {
+        activeProcesses.delete(child);
         reject(err);
       }
     });
   });
 }
+
+process.on('SIGINT', () => {
+  activeProcesses.forEach(child => {
+    child.kill('SIGTERM');
+  });
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  activeProcesses.forEach(child => {
+    child.kill('SIGTERM');
+  });
+  process.exit(0);
+});
