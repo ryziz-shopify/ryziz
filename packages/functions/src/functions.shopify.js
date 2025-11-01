@@ -2,17 +2,13 @@ import { shopifyApp } from '@shopify/shopify-app-express';
 import { Session } from '@shopify/shopify-api';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const hostName = process.env.SHOPIFY_HOST_NAME || 'localhost:8080';
-const isLocalhost = hostName.includes('localhost') || hostName.includes('127.0.0.1');
-
 const shopify = shopifyApp({
   sessionStorage: createSessionStorage(),
   api: {
     apiKey: process.env.SHOPIFY_API_KEY,
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
     scopes: process.env.SHOPIFY_SCOPES?.split(',') || [],
-    hostName: hostName,
-    hostScheme: isLocalhost ? 'http' : 'https',
+    hostName: process.env.SHOPIFY_HOST_NAME,
     apiVersion: '2025-10'
   },
   auth: {

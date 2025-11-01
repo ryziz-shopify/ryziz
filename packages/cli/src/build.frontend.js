@@ -8,6 +8,7 @@ const OUTDIR = path.join(RYZIZ_DIR, 'public');
 
 export default async function build(options = {}) {
   const watch = options.watch || false;
+  const shopifyApiKey = options.shopifyApiKey || '';
 
   const buildOptions = {
     entryPoints: {
@@ -23,7 +24,8 @@ export default async function build(options = {}) {
     plugins: [
       cleanDistPlugin(),
       virtualRoutesPlugin(),
-      copyPublicPlugin()
+      copyPublicPlugin(),
+      injectApiKeyPlugin(shopifyApiKey)
     ]
   };
 
@@ -87,9 +89,28 @@ function copyPublicPlugin() {
   };
 }
 
+function injectApiKeyPlugin(apiKey) {
+  return {
+    name: 'inject-api-key',
+    setup(build) {
+      build.onEnd(() => {
+        const appIndexPath = path.join(process.cwd(), OUTDIR, 'app/index.html');
+
+        if (fs.existsSync(appIndexPath)) {
+          let content = fs.readFileSync(appIndexPath, 'utf8');
+          content = content.replace('%SHOPIFY_API_KEY%', apiKey);
+          fs.writeFileSync(appIndexPath, content);
+        }
+      });
+    }
+  };
+}
+
 async function scanPageFiles() {
-  const pattern = path.join(process.cwd(), 'src/page.*.jsx');
-  const files = await glob(pattern);
+  const files = await glob([
+    path.join(process.cwd(), 'src/page.*.jsx'),
+    path.join(process.cwd(), 'src/app.*.jsx')
+  ]);
 
   return files.map(file => {
     const filename = path.basename(file);
@@ -101,6 +122,15 @@ async function scanPageFiles() {
 }
 
 function filenameToRoute(filename) {
+  if (filename.startsWith('app.')) {
+    const name = filename.replace('app.', '').replace('.jsx', '');
+    if (name === 'index') return '/app/';
+
+    return '/app/' + name.split('.').map(segment =>
+      segment.startsWith('$') ? ':' + segment.slice(1) : segment
+    ).join('/');
+  }
+
   const name = filename.replace('page.', '').replace('.jsx', '');
   if (name === 'index') return '/';
 

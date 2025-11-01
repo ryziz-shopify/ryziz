@@ -80,15 +80,7 @@ export function readShopifyEnv(filename) {
 }
 
 function updateWebhooksSection(tomlContent, topics, url, apiVersion) {
-  const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
   const updated = parse(tomlContent);
-
-  if (isLocalhost) {
-    updated.webhooks = {
-      api_version: apiVersion
-    };
-    return patch(tomlContent, updated);
-  }
 
   const subscriptions = [
     {

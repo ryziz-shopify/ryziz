@@ -2,11 +2,12 @@
 
 client_id = "5b375d315a553f0ed46bf437a709e1b9"
 name = "tien-dev-test-2"
-application_url = "http://localhost:8080"
+application_url = "https://rendered-vincent-amber-bugs.trycloudflare.com/app"
 embedded = true
 
 [webhooks]
 api_version = "2026-01"
+subscriptions = [ { compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ], uri = "https://rendered-vincent-amber-bugs.trycloudflare.com/webhook" }, { topics = [ "app/uninstalled" ], uri = "https://rendered-vincent-amber-bugs.trycloudflare.com/webhook" } ]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -14,7 +15,7 @@ scopes = "read_products"
 
 [auth]
 redirect_urls = [
-  "http://localhost:8080/auth/callback",
-  "http://localhost:8080/auth/shopify/callback",
-  "http://localhost:8080/api/auth/callback"
+  "https://rendered-vincent-amber-bugs.trycloudflare.com/auth/callback",
+  "https://rendered-vincent-amber-bugs.trycloudflare.com/auth/shopify/callback",
+  "https://rendered-vincent-amber-bugs.trycloudflare.com/api/auth/callback"
 ]

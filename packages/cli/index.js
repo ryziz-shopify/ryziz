@@ -20,10 +20,12 @@ program
   .command('dev')
   .description('Development mode')
   .option('--reset', 'Reset Shopify config selection')
-  .option('--use-localhost', 'Skip tunnel, use localhost:8080 (webhooks won\'t work)')
   .action(async (options) => {
-    let tunnelUrl = 'http://localhost:8080';
-    let selectedConfig = '';
+    const shopify = {
+      configPath: '',
+      env: {},
+      tunnel: ''
+    };
 
     await runTasks([
       createTask('Select config', (task) => {
@@ -42,24 +44,24 @@ program
           }),
           createTask('Choose config', async (task) => {
             if (configs.length === 1) {
-              selectedConfig = configs[0].value;
+              shopify.configPath = configs[0].value;
               return;
             }
 
-            selectedConfig = await task.prompt(ListrInquirerPromptAdapter).run(select, {
+            shopify.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
               message: 'Select Shopify config',
               choices: configs.map(c => ({
                 name: `${c.label} (${c.name})`,
                 value: c.value
               }))
             });
-            writeCache({ shopifyConfig: selectedConfig });
+            writeCache({ shopifyConfig: shopify.configPath });
           }),
           createTask('Done', () => {
             task.title = 'Config selected';
             task.output = fromCache
-              ? `${selectedConfig} (cached, use --reset to change)`
-              : selectedConfig;
+              ? `${shopify.configPath} (cached, use --reset to change)`
+              : shopify.configPath;
           })
         ]);
       }, {
@@ -70,15 +72,13 @@ program
       }),
       createTask('Dev', (task) => {
         return sequential(task, [
+          createTask('Load environment', async () => {
+            shopify.env = readShopifyEnv(shopify.configPath);
+          }),
           createTask('Build', (task) => {
             return parallel(task, [
               createTask('Setup environment', (task) => {
-                let config = {};
-
                 return sequential(task, [
-                  createTask('Load config', async () => {
-                    config = readShopifyEnv(selectedConfig);
-                  }),
                   createTask('Fetch secrets', (task) => {
                     return parallel(task, [
                       createTask('Load API secret', async () => {
@@ -88,12 +88,12 @@ program
                           'env',
                           'show',
                           '--config',
-                          selectedConfig
+                          shopify.configPath
                         ], {
                           onLine(line, { resolve }) {
                             const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
                             if (match) {
-                              config.SHOPIFY_API_SECRET = match[1].trim();
+                              shopify.env.SHOPIFY_API_SECRET = match[1].trim();
                               resolve();
                             }
                           }
@@ -111,18 +111,16 @@ program
                             if (line.includes('.trycloudflare.com')) {
                               const match = line.match(/(https:\/\/[^\s]+\.trycloudflare\.com)/);
                               if (match) {
-                                tunnelUrl = match[1];
+                                shopify.tunnel = match[1];
                                 resolve();
                               }
                             }
 
                             if (line.includes('ERR') && (line.includes('429') || line.includes('Too Many Requests'))) {
-                              reject(new Error('Tunnel rate limited. Use --use-localhost flag'));
+                              reject(new Error('Tunnel rate limited'));
                             }
                           }
                         });
-                      }, {
-                        enabled: () => !options.useLocalhost
                       })
                     ]);
                   }),
@@ -130,9 +128,9 @@ program
                     const fs = await import('fs');
                     const path = await import('path');
 
-                    config.SHOPIFY_HOST_NAME = tunnelUrl.replace(/^https?:\/\//, '');
+                    shopify.env.SHOPIFY_HOST_NAME = shopify.tunnel.replace(/^https?:\/\//, '');
 
-                    const envContent = Object.entries(config)
+                    const envContent = Object.entries(shopify.env)
                       .map(([key, value]) => `${key}=${value}`)
                       .join('\n');
 
@@ -142,7 +140,7 @@ program
                 ]);
               }),
               createTask('Build web', async () => {
-                await buildFrontend({ watch: true });
+                await buildFrontend({ watch: true, shopifyApiKey: shopify.env.SHOPIFY_API_KEY });
               }),
               createTask('Setup functions', (task) => {
                 return sequential(task, [
@@ -177,13 +175,13 @@ program
                 });
               }),
               createTask('Register app', async () => {
-                await deployShopify(tunnelUrl, selectedConfig);
+                await deployShopify(shopify.tunnel, shopify.configPath);
                 await spawnWithCallback('npx', [
                   'shopify',
                   'app',
                   'deploy',
                   '--config',
-                  selectedConfig,
+                  shopify.configPath,
                   '--force'
                 ]);
               })
@@ -191,7 +189,7 @@ program
           }),
           createTask('Done', () => {
             task.title = 'Dev ready';
-            task.output = tunnelUrl;
+            task.output = shopify.tunnel;
           })
         ]);
       }, {

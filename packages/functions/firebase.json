@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/auth",
+        "function": "auth"
+      },
+      {
         "source": "/auth/**",
         "function": "auth"
       },
@@ -18,6 +22,18 @@
       {
         "source": "/api/**",
         "function": "api"
+      },
+      {
+        "source": "/app",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "/app/**",
+        "destination": "/app/index.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   },
