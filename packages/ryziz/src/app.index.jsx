@@ -1,7 +1,8 @@
-// shopify is provided by Shopify App Bridge (loaded in index.html)
+import { shopify } from "@ryziz-shopify/router";
+
 export default function AppIndex() {
   const openProductPicker = async () => {
-    const products = await shopify.resourcePicker({type: 'product'});
+    const products = await shopify.resourcePicker({ type: 'product' });
     shopify.toast.show('Selected ' + products.length + ' products');
   };
 
