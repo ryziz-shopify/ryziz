@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/cli",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "license": "MIT",
   "scripts": {
     "postinstall": "patch-package"
