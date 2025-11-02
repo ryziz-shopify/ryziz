@@ -14,13 +14,11 @@
     "firebase-tools": "^14.23.0",
     "glob": "^11.0.3",
     "listr2": "^9.0.5",
+    "patch-package": "^8.0.1",
     "toml-patch": "^0.2.3"
   },
   "bin": {
     "ryziz": "./index.js"
   },
-  "type": "module",
-  "devDependencies": {
-    "patch-package": "^8.0.1"
-  }
+  "type": "module"
 }
