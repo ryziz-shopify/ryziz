@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// CLI for Ryziz - Shopify App Framework
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
