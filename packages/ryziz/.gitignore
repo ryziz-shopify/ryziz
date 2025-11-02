@@ -1,5 +1,6 @@
 .ryziz/
 .shopify/
+node_modules/
 
 *-debug*.log
 .firebase/

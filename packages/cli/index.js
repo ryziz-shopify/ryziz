@@ -8,6 +8,9 @@ import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback } from './src/util.spawn.js';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
+import path from 'path';
 
 const program = new Command();
 
@@ -15,6 +18,80 @@ program
   .name('ryziz')
   .description('Ryziz CLI')
   .version('0.1.0');
+
+program
+  .command('init')
+  .description('Initialize a new Ryziz project')
+  .action(async () => {
+    let ryzizPackagePath = '';
+    const targetDir = process.cwd();
+
+    await runTasks([
+      createTask('Init', (task) => {
+        return sequential(task, [
+          createTask('Scaffold', (task) => {
+            return sequential(task, [
+              createTask('Locate template', async () => {
+                const module = await import('module');
+                const packageJsonPath = module.createRequire(import.meta.url).resolve('@ryziz-shopify/ryziz/package.json');
+                ryzizPackagePath = path.dirname(packageJsonPath);
+              }),
+              createTask('Copy files to project', (task) => {
+                const allFiles = fs.readdirSync(ryzizPackagePath)
+                  .filter(file => file !== 'node_modules');
+
+                return parallel(task, allFiles.map(file =>
+                  createTask(file, async () => {
+                    const source = path.join(ryzizPackagePath, file);
+                    const dest = path.join(targetDir, file);
+
+                    const stats = await fsPromises.stat(source);
+                    if (stats.isDirectory()) {
+                      await fsPromises.cp(source, dest, { recursive: true });
+                    } else {
+                      await fsPromises.copyFile(source, dest);
+                    }
+                  })
+                ));
+              })
+            ]);
+          }),
+          createTask('Dependencies', (task) => {
+            return sequential(task, [
+              createTask('Install CLI tools', async () => {
+                await spawnWithCallback('npm', ['install', '@ryziz-shopify/cli@latest', '--save-dev']);
+              }),
+              createTask('Install Ryziz packages', async () => {
+                await spawnWithCallback('npm', ['install', '@ryziz-shopify/router@latest', '@ryziz-shopify/functions@latest', '--save']);
+              }),
+              createTask('Install all packages', async () => {
+                await spawnWithCallback('npm', ['install']);
+              })
+            ]);
+          }),
+          createTask('Finalize', (task) => {
+            return sequential(task, [
+              createTask('Initialize git', async () => {
+                await spawnWithCallback('git', ['init']);
+              }),
+              createTask('Clean package config', async () => {
+                await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
+              })
+            ]);
+          }),
+          createTask('Done', () => {
+            task.title = 'Project ready';
+            task.output = 'Next: npm run link, then npm run dev';
+          })
+        ]);
+      }, {
+        rendererOptions: {
+          outputBar: Infinity,
+          persistentOutput: true
+        }
+      })
+    ]);
+  });
 
 program
   .command('dev')
@@ -125,17 +202,14 @@ program
                     ]);
                   }),
                   createTask('Write .env', async () => {
-                    const fs = await import('fs');
-                    const path = await import('path');
-
                     shopify.env.SHOPIFY_HOST_NAME = shopify.tunnel.replace(/^https?:\/\//, '');
 
                     const envContent = Object.entries(shopify.env)
                       .map(([key, value]) => `${key}=${value}`)
                       .join('\n');
 
-                    const envPath = path.default.join(process.cwd(), '.ryziz/functions/.env');
-                    fs.default.writeFileSync(envPath, envContent);
+                    const envPath = path.join(process.cwd(), '.ryziz/functions/.env');
+                    fs.writeFileSync(envPath, envContent);
                   })
                 ]);
               }),
@@ -199,6 +273,16 @@ program
         }
       })
     ]);
+  });
+
+program
+  .command('link')
+  .description('Link Shopify app config')
+  .action(async () => {
+    const { spawn } = await import('child_process');
+    spawn('npx', ['shopify', 'app', 'config', 'link'], {
+      stdio: 'inherit',
+    });
   });
 
 program.parse();
