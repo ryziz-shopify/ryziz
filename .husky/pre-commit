@@ -1,0 +1,70 @@
+#!/usr/bin/env sh
+
+# Get staged files
+staged_files=$(git diff --cached --name-only)
+
+# Check if any staged files are empty
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+echo "🔍 Checking for package changes..."
+
+# Track which packages need version bump
+bump_cli=false
+bump_functions=false
+bump_router=false
+bump_ryziz=false
+
+# Check which packages have staged changes
+echo "$staged_files" | while read -r file; do
+  case "$file" in
+    packages/cli/*)
+      if [ "$file" != "packages/cli/package.json" ]; then
+        bump_cli=true
+      fi
+      ;;
+    packages/functions/*)
+      if [ "$file" != "packages/functions/package.json" ]; then
+        bump_functions=true
+      fi
+      ;;
+    packages/router/*)
+      if [ "$file" != "packages/router/package.json" ]; then
+        bump_router=true
+      fi
+      ;;
+    packages/ryziz/*)
+      if [ "$file" != "packages/ryziz/package.json" ]; then
+        bump_ryziz=true
+      fi
+      ;;
+  esac
+done
+
+# Bump version for changed packages (patch by default)
+if echo "$staged_files" | grep -q "^packages/cli/" | grep -v "package.json$"; then
+  echo "📦 Bumping version for @ryziz-shopify/cli..."
+  cd packages/cli && npm version patch --no-git-tag-version && cd ../..
+  git add packages/cli/package.json
+fi
+
+if echo "$staged_files" | grep -q "^packages/functions/" | grep -v "package.json$"; then
+  echo "📦 Bumping version for @ryziz-shopify/functions..."
+  cd packages/functions && npm version patch --no-git-tag-version && cd ../..
+  git add packages/functions/package.json
+fi
+
+if echo "$staged_files" | grep -q "^packages/router/" | grep -v "package.json$"; then
+  echo "📦 Bumping version for @ryziz-shopify/router..."
+  cd packages/router && npm version patch --no-git-tag-version && cd ../..
+  git add packages/router/package.json
+fi
+
+if echo "$staged_files" | grep -q "^packages/ryziz/" | grep -v "package.json$"; then
+  echo "📦 Bumping version for @ryziz-shopify/ryziz..."
+  cd packages/ryziz && npm version patch --no-git-tag-version && cd ../..
+  git add packages/ryziz/package.json
+fi
+
+echo "✅ Version bump complete"

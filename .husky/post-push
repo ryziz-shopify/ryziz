@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+
+# Get the current branch name
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Only publish if pushing to master
+if [ "$current_branch" = "master" ]; then
+  echo "📦 Checking for version bumps..."
+
+  # Get the previous commit reference
+  prev_commit=$(git rev-parse origin/master@{1} 2>/dev/null || git rev-parse HEAD~1 2>/dev/null)
+
+  # Count published packages
+  published_count=0
+
+  # Check if VERSION changed in each package.json (not just the file)
+  # CLI package
+  if git diff --unified=0 $prev_commit HEAD packages/cli/package.json | grep -q '^\+.*"version"'; then
+    echo "📦 Publishing @ryziz-shopify/cli..."
+    (cd packages/cli && npm publish --access public) && published_count=$((published_count + 1))
+  fi
+
+  # Functions package
+  if git diff --unified=0 $prev_commit HEAD packages/functions/package.json | grep -q '^\+.*"version"'; then
+    echo "📦 Publishing @ryziz-shopify/functions..."
+    (cd packages/functions && npm publish --access public) && published_count=$((published_count + 1))
+  fi
+
+  # Router package
+  if git diff --unified=0 $prev_commit HEAD packages/router/package.json | grep -q '^\+.*"version"'; then
+    echo "📦 Publishing @ryziz-shopify/router..."
+    (cd packages/router && npm publish --access public) && published_count=$((published_count + 1))
+  fi
+
+  # Ryziz package
+  if git diff --unified=0 $prev_commit HEAD packages/ryziz/package.json | grep -q '^\+.*"version"'; then
+    echo "📦 Publishing @ryziz-shopify/ryziz..."
+    (cd packages/ryziz && npm publish --access public) && published_count=$((published_count + 1))
+  fi
+
+  if [ "$published_count" -eq 0 ]; then
+    echo "ℹ️  No version bumps detected, skipping publish"
+  else
+    echo "✅ Published $published_count package(s) successfully!"
+  fi
+else
+  echo "ℹ️  Skipping npm publish (not on master branch)"
+fi

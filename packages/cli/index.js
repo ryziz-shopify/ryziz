@@ -74,6 +74,10 @@ program
               }),
               createTask('Clean package config', async () => {
                 await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
+              }),
+              createTask('Set package name', async () => {
+                const folderName = path.basename(process.cwd());
+                await spawnWithCallback('npm', ['pkg', 'set', `name=${folderName}`]);
               })
             ]);
           }),
