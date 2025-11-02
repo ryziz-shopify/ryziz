@@ -5,35 +5,36 @@ current_branch=$(git rev-parse --abbrev-ref HEAD)
 
 # Only publish if pushing to master
 if [ "$current_branch" = "master" ]; then
-  echo "📦 Checking for version bumps..."
+  echo "📦 Checking for version bumps before push..."
 
-  # Get the previous commit reference
-  prev_commit=$(git rev-parse origin/master@{1} 2>/dev/null || git rev-parse HEAD~1 2>/dev/null)
+  # Get the list of changed files that will be pushed
+  # Compare local master with remote master
+  changed_files=$(git diff --name-only origin/master HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
 
   # Count published packages
   published_count=0
 
-  # Check if VERSION changed in each package.json (not just the file)
+  # Check if VERSION changed in each package.json
   # CLI package
-  if git diff --unified=0 $prev_commit HEAD packages/cli/package.json | grep -q '^\+.*"version"'; then
+  if git diff --unified=0 origin/master HEAD packages/cli/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
     echo "📦 Publishing @ryziz-shopify/cli..."
     (cd packages/cli && npm publish --access public) && published_count=$((published_count + 1))
   fi
 
   # Functions package
-  if git diff --unified=0 $prev_commit HEAD packages/functions/package.json | grep -q '^\+.*"version"'; then
+  if git diff --unified=0 origin/master HEAD packages/functions/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
     echo "📦 Publishing @ryziz-shopify/functions..."
     (cd packages/functions && npm publish --access public) && published_count=$((published_count + 1))
   fi
 
   # Router package
-  if git diff --unified=0 $prev_commit HEAD packages/router/package.json | grep -q '^\+.*"version"'; then
+  if git diff --unified=0 origin/master HEAD packages/router/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
     echo "📦 Publishing @ryziz-shopify/router..."
     (cd packages/router && npm publish --access public) && published_count=$((published_count + 1))
   fi
 
   # Ryziz package
-  if git diff --unified=0 $prev_commit HEAD packages/ryziz/package.json | grep -q '^\+.*"version"'; then
+  if git diff --unified=0 origin/master HEAD packages/ryziz/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
     echo "📦 Publishing @ryziz-shopify/ryziz..."
     (cd packages/ryziz && npm publish --access public) && published_count=$((published_count + 1))
   fi
