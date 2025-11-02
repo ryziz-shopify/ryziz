@@ -1,6 +1,10 @@
 {
   "name": "@ryziz-shopify/cli",
-  "version": "0.1.17",
+  "version": "0.1.19",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "patch-package"
+  },
   "dependencies": {
     "@inquirer/prompts": "^7.9.0",
     "@listr2/prompt-adapter-inquirer": "^3.0.5",
@@ -15,5 +19,8 @@
   "bin": {
     "ryziz": "./index.js"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "patch-package": "^8.0.1"
+  }
 }

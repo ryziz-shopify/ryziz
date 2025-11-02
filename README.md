@@ -1,44 +1,37 @@
-# ryziz
+# Ryziz
 
-## Structure
+Framework for building Shopify embedded apps on Firebase with file-based routing.
 
+## Quick Start
+
+```bash
+# Create new project
+npx @ryziz-shopify/ryziz init
+
+# Link to Shopify app
+npm run link
+
+# Start development
+npm run dev
 ```
-ryziz/
-├── .gitignore                        ← Ignore node_modules for clean repo
-├── README.md                         ← Project documentation
-├── package.json                      ← Enable monorepo workspace
-├── package-lock.json                 ← Lock versions for reproducible builds
-├── docs/
-│   └── coding-standards.md           ← Enforce consistency across codebase
-└── packages/
-    ├── cli/                          ← @ryziz-shopify/cli
-    │   ├── index.js                  ← CLI entry point for bin command
-    │   ├── package.json              ← Declare build dependencies
-    │   └── src/
-    │       ├── build.frontend.js     ← Bundle pages with esbuild
-    │       ├── build.backend.js      ← Bundle API routes with esbuild
-    │       ├── util.task.js          ← Generic task utilities for all commands
-    │       └── util.spawn.js         ← Spawn processes for emulators
-    │
-    ├── router/                       ← @ryziz-shopify/router
-    │   ├── package.json              ← Declare runtime dependencies
-    │   └── src/
-    │       ├── router.routes.jsx     ← Mount app to DOM and setup routing
-    │       └── router.exports.js     ← Expose router utilities to users
-    │
-    ├── functions/                    ← @ryziz-shopify/functions
-    │   ├── firebase.json             ← Configure emulators and hosting
-    │   ├── package.json              ← Declare Firebase dependencies
-    │   └── src/
-    │       └── functions.entry.js    ← Setup Express app for Cloud Functions
-    │
-    └── ryziz/                        ← @ryziz-shopify/ryziz (test project)
-        ├── .firebaserc               ← Firebase project config
-        ├── .gitignore                ← Ignore build output
-        ├── package.json              ← Link to CLI and router packages
-        ├── public/
-        │   └── index.html            ← HTML template for bundle
-        └── src/
-            ├── page.index.jsx        ← Frontend page example
-            └── api.index.js          ← Backend API example
+
+## What You Get
+
+- **File-based routing** - `page.*.jsx` for public routes, `app.*.jsx` for embedded app, `api.*.js` for endpoints
+- **Shopify integration** - OAuth, webhooks, App Bridge built-in
+- **Firebase deployment** - Cloud Functions + Hosting + Firestore
+- **Hot reload** - Watch mode with automatic rebuild
+- **Zero config** - Convention over configuration
+
+## Documentation
+
+- **Getting Started** - `packages/ryziz/docs/getting-started.md` (file-based routing guide)
+- **Contributing** - `docs/contribution-guide.md` (architecture & build pipeline)
+- **Coding Standards** - `docs/coding-standards.md` (code patterns)
+
+## Commands
+
+```bash
+npm run dev   # Start development with hot reload
+npm run link  # Link project to Shopify app
 ```

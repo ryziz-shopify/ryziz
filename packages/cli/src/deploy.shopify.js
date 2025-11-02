@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { glob } from 'glob';
-import { parse, patch } from 'toml-patch';
+import { parse, stringify } from 'toml-patch';
 import { scanWebhookFiles } from './build.backend.js';
 
 const CACHE_PATH = path.join(process.cwd(), '.ryziz/cache.json');
@@ -13,13 +13,26 @@ export default async function deployShopify(tunnelUrl, filename) {
   const tomlData = parse(tomlContent);
 
   const currentOrigin = new URL(tomlData.application_url).origin;
-  let updatedContent = tomlContent.replaceAll(currentOrigin, tunnelUrl);
 
   const webhooks = await scanWebhookFiles();
   const allTopics = webhooks.map(w => convertTopicFormat(w.topic));
   const topics = allTopics.filter(t => !COMPLIANCE_TOPICS.includes(t));
 
-  updatedContent = updateWebhooksSection(updatedContent, topics, tunnelUrl, tomlData.webhooks.api_version);
+  // Update the JavaScript object
+  tomlData.application_url = tomlData.application_url.replace(currentOrigin, tunnelUrl);
+
+  // Update auth redirect URLs
+  if (tomlData.auth && tomlData.auth.redirect_urls) {
+    tomlData.auth.redirect_urls = tomlData.auth.redirect_urls.map(url =>
+      url.replace(currentOrigin, tunnelUrl)
+    );
+  }
+
+  // Update webhooks
+  updateWebhooksSection(tomlData, topics, tunnelUrl);
+
+  // Stringify back to TOML
+  const updatedContent = stringify(tomlData);
 
   fs.writeFileSync(tomlPath, updatedContent);
 }
@@ -79,9 +92,7 @@ export function readShopifyEnv(filename) {
   };
 }
 
-function updateWebhooksSection(tomlContent, topics, url, apiVersion) {
-  const updated = parse(tomlContent);
-
+function updateWebhooksSection(tomlData, topics, url) {
   const subscriptions = [
     {
       compliance_topics: COMPLIANCE_TOPICS,
@@ -96,12 +107,7 @@ function updateWebhooksSection(tomlContent, topics, url, apiVersion) {
     });
   }
 
-  updated.webhooks = {
-    api_version: apiVersion,
-    subscriptions
-  };
-
-  return patch(tomlContent, updated);
+  tomlData.webhooks.subscriptions = subscriptions;
 }
 
 function convertTopicFormat(topic) {
