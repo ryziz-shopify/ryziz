@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/cli",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "dependencies": {
     "@inquirer/prompts": "^7.9.0",
     "@listr2/prompt-adapter-inquirer": "^3.0.5",
