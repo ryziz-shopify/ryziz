@@ -10,61 +10,44 @@ fi
 
 echo "🔍 Checking for package changes..."
 
-# Track which packages need version bump
-bump_cli=false
-bump_functions=false
-bump_router=false
-bump_ryziz=false
-
-# Check which packages have staged changes
-echo "$staged_files" | while read -r file; do
-  case "$file" in
-    packages/cli/*)
-      if [ "$file" != "packages/cli/package.json" ]; then
-        bump_cli=true
-      fi
-      ;;
-    packages/functions/*)
-      if [ "$file" != "packages/functions/package.json" ]; then
-        bump_functions=true
-      fi
-      ;;
-    packages/router/*)
-      if [ "$file" != "packages/router/package.json" ]; then
-        bump_router=true
-      fi
-      ;;
-    packages/ryziz/*)
-      if [ "$file" != "packages/ryziz/package.json" ]; then
-        bump_ryziz=true
-      fi
-      ;;
-  esac
-done
+# Count bumped packages
+bumped_count=0
 
 # Bump version for changed packages (patch by default)
-if echo "$staged_files" | grep -q "^packages/cli/" | grep -v "package.json$"; then
+# CLI package
+if echo "$staged_files" | grep "^packages/cli/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/cli..."
-  cd packages/cli && npm version patch --no-git-tag-version && cd ../..
+  (cd packages/cli && npm version patch --no-git-tag-version)
   git add packages/cli/package.json
+  bumped_count=$((bumped_count + 1))
 fi
 
-if echo "$staged_files" | grep -q "^packages/functions/" | grep -v "package.json$"; then
+# Functions package
+if echo "$staged_files" | grep "^packages/functions/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/functions..."
-  cd packages/functions && npm version patch --no-git-tag-version && cd ../..
+  (cd packages/functions && npm version patch --no-git-tag-version)
   git add packages/functions/package.json
+  bumped_count=$((bumped_count + 1))
 fi
 
-if echo "$staged_files" | grep -q "^packages/router/" | grep -v "package.json$"; then
+# Router package
+if echo "$staged_files" | grep "^packages/router/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/router..."
-  cd packages/router && npm version patch --no-git-tag-version && cd ../..
+  (cd packages/router && npm version patch --no-git-tag-version)
   git add packages/router/package.json
+  bumped_count=$((bumped_count + 1))
 fi
 
-if echo "$staged_files" | grep -q "^packages/ryziz/" | grep -v "package.json$"; then
+# Ryziz package
+if echo "$staged_files" | grep "^packages/ryziz/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/ryziz..."
-  cd packages/ryziz && npm version patch --no-git-tag-version && cd ../..
+  (cd packages/ryziz && npm version patch --no-git-tag-version)
   git add packages/ryziz/package.json
+  bumped_count=$((bumped_count + 1))
 fi
 
-echo "✅ Version bump complete"
+if [ "$bumped_count" -eq 0 ]; then
+  echo "ℹ️  No package changes detected"
+else
+  echo "✅ Bumped $bumped_count package(s)"
+fi
