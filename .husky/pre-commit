@@ -18,7 +18,7 @@ bumped_count=0
 if echo "$staged_files" | grep "^packages/cli/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/cli..."
   (cd packages/cli && npm version patch --no-git-tag-version)
-  git add packages/cli/package.json
+  git add packages/cli/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
 fi
 
@@ -26,7 +26,7 @@ fi
 if echo "$staged_files" | grep "^packages/functions/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/functions..."
   (cd packages/functions && npm version patch --no-git-tag-version)
-  git add packages/functions/package.json
+  git add packages/functions/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
 fi
 
@@ -34,7 +34,7 @@ fi
 if echo "$staged_files" | grep "^packages/router/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/router..."
   (cd packages/router && npm version patch --no-git-tag-version)
-  git add packages/router/package.json
+  git add packages/router/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
 fi
 
@@ -42,7 +42,7 @@ fi
 if echo "$staged_files" | grep "^packages/ryziz/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/ryziz..."
   (cd packages/ryziz && npm version patch --no-git-tag-version)
-  git add packages/ryziz/package.json
+  git add packages/ryziz/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
 fi
 
