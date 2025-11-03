@@ -1,13 +1,13 @@
 {
   "name": "@ryziz-shopify/ryziz",
-  "version": "0.1.14",
+  "version": "0.1.19",
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/ryziz-shopify/ryziz.git"
   },
-  "bin": "node_modules/@ryziz-shopify/cli/index.js",
+  "bin": "node_modules/.bin/ryziz",
   "dependencies": {
     "@ryziz-shopify/cli": "latest",
     "@ryziz-shopify/functions": "latest",

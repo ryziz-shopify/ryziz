@@ -1,0 +1,41 @@
+name: Auto Publish
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: |
+          # CLI
+          if git diff HEAD~1 HEAD packages/cli/package.json | grep -q '^\+.*"version"'; then
+            cd packages/cli && npm publish --access public && cd -
+          fi
+
+          # Functions
+          if git diff HEAD~1 HEAD packages/functions/package.json | grep -q '^\+.*"version"'; then
+            cd packages/functions && npm publish --access public && cd -
+          fi
+
+          # Router
+          if git diff HEAD~1 HEAD packages/router/package.json | grep -q '^\+.*"version"'; then
+            cd packages/router && npm publish --access public && cd -
+          fi
+
+          # Ryziz
+          if git diff HEAD~1 HEAD templates/ryziz/package.json | grep -q '^\+.*"version"'; then
+            cd templates/ryziz && npm publish --access public && cd -
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
