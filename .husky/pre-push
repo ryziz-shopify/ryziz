@@ -34,9 +34,9 @@ if [ "$current_branch" = "master" ]; then
   fi
 
   # Ryziz package
-  if git diff --unified=0 origin/master HEAD packages/ryziz/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
+  if git diff --unified=0 origin/master HEAD templates/ryziz/package.json 2>/dev/null | grep -q '^\+.*"version"'; then
     echo "📦 Publishing @ryziz-shopify/ryziz..."
-    (cd packages/ryziz && npm publish --access public) && published_count=$((published_count + 1))
+    (cd templates/ryziz && npm publish --access public) && published_count=$((published_count + 1))
   fi
 
   if [ "$published_count" -eq 0 ]; then

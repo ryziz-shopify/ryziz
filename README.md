@@ -2,36 +2,32 @@
 
 Framework for building Shopify embedded apps on Firebase with file-based routing.
 
-## Quick Start
+## For End Users
 
 ```bash
-# Create new project
 npx @ryziz-shopify/ryziz init
-
-# Link to Shopify app
-npm run link
-
-# Start development
-npm run dev
 ```
 
-## What You Get
+See [templates/ryziz/README.md](templates/ryziz/README.md) for usage documentation.
 
-- **File-based routing** - `page.*.jsx` for public routes, `app.*.jsx` for embedded app, `api.*.js` for endpoints
-- **Shopify integration** - OAuth, webhooks, App Bridge built-in
-- **Firebase deployment** - Cloud Functions + Hosting + Firestore
-- **Hot reload** - Watch mode with automatic rebuild
-- **Zero config** - Convention over configuration
+## Monorepo Structure
 
-## Documentation
+**templates/ryziz/** - User project template, source of truth for package versions
 
-- **Getting Started** - `packages/ryziz/docs/getting-started.md` (file-based routing guide)
-- **Contributing** - `docs/contribution-guide.md` (architecture & build pipeline)
-- **Coding Standards** - `docs/coding-standards.md` (code patterns)
+**packages/cli/** - Build tools and CLI commands (init, dev, link)
 
-## Commands
+**packages/router/** - Frontend routing and Shopify App Bridge exports
 
-```bash
-npm run dev   # Start development with hot reload
-npm run link  # Link project to Shopify app
-```
+**packages/functions/** - Firebase Cloud Functions with OAuth and webhook handling
+
+## For Contributors
+
+Read [docs/contribution-guide.md](docs/contribution-guide.md) for architecture overview and contribution workflow.
+
+Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and conventions.
+
+## Version Management
+
+Automatic version bumping and publishing handled by git hooks:
+- **pre-commit**: Auto-increment patch version for changed packages
+- **pre-push**: Auto-publish packages with version changes (master branch only)

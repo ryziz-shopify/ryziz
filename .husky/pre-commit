@@ -39,10 +39,10 @@ if echo "$staged_files" | grep "^packages/router/" | grep -v "package.json$" | g
 fi
 
 # Ryziz package
-if echo "$staged_files" | grep "^packages/ryziz/" | grep -v "package.json$" | grep -q .; then
+if echo "$staged_files" | grep "^templates/ryziz/" | grep -v "package.json$" | grep -q .; then
   echo "📦 Bumping version for @ryziz-shopify/ryziz..."
-  (cd packages/ryziz && npm version patch --no-git-tag-version)
-  git add packages/ryziz/package.json package-lock.json
+  (cd templates/ryziz && npm version patch --no-git-tag-version)
+  git add templates/ryziz/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
 fi
 
