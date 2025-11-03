@@ -29,7 +29,7 @@ program
     await runTasks([
       createTask('Init', (task) => {
         return sequential(task, [
-          createTask('Scaffold', (task) => {
+          createTask('Setup project', (task) => {
             return sequential(task, [
               createTask('Locate template', async () => {
                 const module = await import('module');
@@ -53,6 +53,27 @@ program
                     }
                   })
                 ));
+              }),
+              createTask('Restore dotfiles', async () => {
+                const gitignoreSource = path.join(targetDir, 'gitignore');
+                const gitignoreDest = path.join(targetDir, '.gitignore');
+                if (fs.existsSync(gitignoreSource)) {
+                  await fsPromises.rename(gitignoreSource, gitignoreDest);
+                }
+              }),
+              createTask('Configure project', (task) => {
+                return sequential(task, [
+                  createTask('Initialize git', async () => {
+                    await spawnWithCallback('git', ['init']);
+                  }),
+                  createTask('Clean package config', async () => {
+                    await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
+                  }),
+                  createTask('Set package name', async () => {
+                    const folderName = path.basename(process.cwd());
+                    await spawnWithCallback('npm', ['pkg', 'set', `name=${folderName}`]);
+                  })
+                ]);
               })
             ]);
           }),
@@ -64,20 +85,6 @@ program
               createTask('Update Ryziz packages', async () => {
                 await spawnWithCallback('npm', ['install', '@ryziz-shopify/router@latest', '@ryziz-shopify/functions@latest', '--save']);
                 await spawnWithCallback('npm', ['install', '@ryziz-shopify/cli@latest', '--save-dev']);
-              })
-            ]);
-          }),
-          createTask('Finalize', (task) => {
-            return sequential(task, [
-              createTask('Initialize git', async () => {
-                await spawnWithCallback('git', ['init']);
-              }),
-              createTask('Clean package config', async () => {
-                await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
-              }),
-              createTask('Set package name', async () => {
-                const folderName = path.basename(process.cwd());
-                await spawnWithCallback('npm', ['pkg', 'set', `name=${folderName}`]);
               })
             ]);
           }),

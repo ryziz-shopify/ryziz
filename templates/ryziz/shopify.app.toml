@@ -1,21 +1,14 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
-
 client_id = "5b375d315a553f0ed46bf437a709e1b9"
 name = "tien-dev-test-2"
-application_url = "https://rendered-vincent-amber-bugs.trycloudflare.com/app"
+application_url = "https://postal-right-storage-drop.trycloudflare.com/app"
 embedded = true
 
 [webhooks]
 api_version = "2026-01"
-subscriptions = [ { compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ], uri = "https://rendered-vincent-amber-bugs.trycloudflare.com/webhook" }, { topics = [ "app/uninstalled" ], uri = "https://rendered-vincent-amber-bugs.trycloudflare.com/webhook" } ]
+subscriptions = [ { compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ], uri = "https://postal-right-storage-drop.trycloudflare.com/webhook" }, { topics = [ "app/uninstalled" ], uri = "https://postal-right-storage-drop.trycloudflare.com/webhook" } ]
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_products"
 
 [auth]
-redirect_urls = [
-  "https://rendered-vincent-amber-bugs.trycloudflare.com/auth/callback",
-  "https://rendered-vincent-amber-bugs.trycloudflare.com/auth/shopify/callback",
-  "https://rendered-vincent-amber-bugs.trycloudflare.com/api/auth/callback"
-]
+redirect_urls = [ "https://postal-right-storage-drop.trycloudflare.com/auth/callback", "https://postal-right-storage-drop.trycloudflare.com/auth/shopify/callback", "https://postal-right-storage-drop.trycloudflare.com/api/auth/callback" ]

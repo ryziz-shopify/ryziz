@@ -35,7 +35,11 @@ jobs:
 
           # Ryziz
           if git diff HEAD~1 HEAD templates/ryziz/package.json | grep -q '^\+.*"version"'; then
-            cd templates/ryziz && npm publish --access public && cd -
+            cd templates/ryziz
+            mv .gitignore gitignore
+            npm publish --access public
+            mv gitignore .gitignore
+            cd -
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
