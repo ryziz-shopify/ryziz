@@ -19,13 +19,12 @@ export default async function deployShopify(tunnelUrl, filename) {
   const topics = allTopics.filter(t => !COMPLIANCE_TOPICS.includes(t));
 
   // Update the JavaScript object
-  tomlData.application_url = tomlData.application_url.replace(currentOrigin, tunnelUrl);
+  // Ensure application_url always ends with /app
+  tomlData.application_url = `${tunnelUrl}/app`;
 
-  // Update auth redirect URLs
+  // Update auth redirect URLs - only keep URLs ending with /auth/callback
   if (tomlData.auth && tomlData.auth.redirect_urls) {
-    tomlData.auth.redirect_urls = tomlData.auth.redirect_urls.map(url =>
-      url.replace(currentOrigin, tunnelUrl)
-    );
+    tomlData.auth.redirect_urls = [`${tunnelUrl}/auth/callback`];
   }
 
   // Update webhooks

@@ -19,9 +19,11 @@ export default async function build(options = {}) {
     splitting: true,
     format: 'esm',
     jsx: 'automatic',
+    inject: ['react-shim'],
     minify: !watch,
     sourcemap: watch,
     plugins: [
+      reactShimPlugin(),
       cleanDistPlugin(),
       virtualRoutesPlugin(),
       copyPublicPlugin(),
@@ -35,6 +37,31 @@ export default async function build(options = {}) {
   } else {
     await esbuild.build(buildOptions);
   }
+}
+
+function reactShimPlugin() {
+  return {
+    name: 'react-shim',
+    setup(build) {
+      build.onResolve({ filter: /^react-shim$/ }, () => {
+        return {
+          path: 'react-shim',
+          namespace: 'react-shim'
+        };
+      });
+
+      build.onLoad({ filter: /.*/, namespace: 'react-shim' }, () => {
+        return {
+          contents: `
+            import * as React from 'react';
+            export { React };
+          `,
+          loader: 'js',
+          resolveDir: process.cwd()
+        };
+      });
+    }
+  };
 }
 
 function cleanDistPlugin() {
