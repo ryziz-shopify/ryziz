@@ -5,7 +5,7 @@ Framework for building Shopify embedded apps on Firebase with file-based routing
 ## Installation
 
 ```bash
-npx @ryziz-shopify/ryziz init
+npx @ryziz-shopify/ryziz@latest init
 ```
 
 This will:

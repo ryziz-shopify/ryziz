@@ -5,7 +5,7 @@ Framework for building Shopify embedded apps on Firebase with file-based routing
 ## For End Users
 
 ```bash
-npx @ryziz-shopify/ryziz init
+npx @ryziz-shopify/ryziz@latest init
 ```
 
 See [templates/ryziz/README.md](templates/ryziz/README.md) for usage documentation.

@@ -54,7 +54,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 **Single version management** - When upgrading internal packages, update only `templates/ryziz/package.json`. All new projects inherit these exact versions.
 
-**Template inheritance** - Users don't manually configure dependencies. They run `npx @ryziz-shopify/ryziz init`, which copies the entire template including package.json with pre-defined versions.
+**Template inheritance** - Users don't manually configure dependencies. They run `npx @ryziz-shopify/ryziz@latest init`, which copies the entire template including package.json with pre-defined versions.
 
 **Version strategy** - All `@ryziz-shopify/*` packages set to `"latest"` in templates/ryziz package.json.
 
@@ -72,7 +72,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 ## Init Command Flow
 
-When user runs `npx @ryziz-shopify/ryziz init`:
+When user runs `npx @ryziz-shopify/ryziz@latest init`:
 
 ### Package Resolution
 
@@ -95,7 +95,7 @@ Implementation in `packages/cli/index.js` - Search for `.command('init')`
 
 Uses `createRequire(import.meta.url).resolve()` to leverage Node.js module resolution algorithm.
 
-**Why** - When user runs `npx @ryziz-shopify/ryziz init`, npm installs both ryziz and CLI packages in same node_modules. Node.js resolution automatically finds sibling packages without hardcoded paths.
+**Why** - When user runs `npx @ryziz-shopify/ryziz@latest init`, npm installs both ryziz and CLI packages in same node_modules. Node.js resolution automatically finds sibling packages without hardcoded paths.
 
 **Async File Operations**
 
@@ -322,7 +322,7 @@ Before submitting changes:
 - Test OAuth flow: Install app on dev store
 - Test webhooks: Trigger webhook, check logs
 - Test API endpoints: Call from frontend, verify response
-- Test init command: `cd /tmp && npx /path/to/ryziz init` in empty directory
+- Test init command: `cd /tmp && npx /path/to/ryziz@latest init` in empty directory
 - Verify build output in `.ryziz/`
 
 ### Package Dependencies
