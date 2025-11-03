@@ -1,8 +1,22 @@
-# Ryziz Shopify App
+# Ryziz
 
-Your Shopify embedded app built with Ryziz framework on Firebase.
+Framework for building Shopify embedded apps on Firebase with file-based routing.
+
+## Installation
+
+```bash
+npx @ryziz-shopify/ryziz init
+```
+
+This will:
+- Scaffold a new Shopify app project
+- Install all dependencies
+- Set up file-based routing
+- Configure Firebase and Shopify integration
 
 ## Quick Start
+
+After initialization:
 
 ```bash
 # Link to your Shopify app
@@ -13,6 +27,16 @@ npm run dev
 ```
 
 Development server starts on localhost with Firebase emulators and Cloudflare tunnel for HTTPS.
+
+## What's Included
+
+- **File-based routing** - Convention-based routes from filenames
+- **Shopify OAuth** - Automatic authentication flow
+- **App Bridge** - Shopify UI components and APIs
+- **Firebase** - Cloud Functions, Hosting, Firestore
+- **Hot reload** - Automatic rebuild on file changes
+- **Zero config** - Works out of the box
+- **Best practices** - From 10 years of production experience
 
 ## Documentation
 
@@ -45,16 +69,6 @@ See [docs/getting-started.md](docs/getting-started.md) for complete routing guid
 **shopify.app.toml** - Shopify app configuration
 
 **.firebaserc** - Firebase project ID
-
-## What's Included
-
-- **File-based routing** - Convention-based routes from filenames
-- **Shopify OAuth** - Automatic authentication flow
-- **App Bridge** - Shopify UI components and APIs
-- **Firebase** - Cloud Functions, Hosting, Firestore
-- **Hot reload** - Automatic rebuild on file changes
-- **Zero config** - Works out of the box
-- **Best practices** - From 10 years of production experience
 
 ## Next Steps
 
