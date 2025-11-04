@@ -42,26 +42,9 @@ program
           createTask('Setup project', (task) => {
             return sequential(task, [
               createTask('Locate template', async () => {
-                // Get the directory of the current CLI file
-                const currentFilePath = fileURLToPath(import.meta.url);
-                const cliDir = path.dirname(currentFilePath);
-
-                // Navigate up from node_modules/@ryziz-shopify/cli/ to the template root
-                // CLI is at: <template-root>/node_modules/@ryziz-shopify/cli/index.js
-                // So go up 3 levels: cli -> @ryziz-shopify -> node_modules -> template root
-                ryzizPackagePath = path.resolve(cliDir, '../../..');
-
-                // Verify this is the correct location by checking for package.json
-                const packageJsonPath = path.join(ryzizPackagePath, 'package.json');
-                if (!fs.existsSync(packageJsonPath)) {
-                  throw new Error(`Template package.json not found at ${packageJsonPath}`);
-                }
-
-                // Verify it's the ryziz template package
-                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                if (packageJson.name !== '@ryziz-shopify/ryziz') {
-                  throw new Error(`Found package ${packageJson.name} instead of @ryziz-shopify/ryziz`);
-                }
+                const module = await import('module');
+                const packageJsonPath = module.createRequire(import.meta.url).resolve('@ryziz-shopify/ryziz/package.json');
+                ryzizPackagePath = path.dirname(packageJsonPath);
               }),
               createTask('Copy files to project', (task) => {
                 return parallel(task, fs.readdirSync(ryzizPackagePath)
