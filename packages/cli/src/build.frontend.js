@@ -23,7 +23,7 @@ export default async function build(options = {}) {
     minify: !watch,
     sourcemap: watch,
     alias: {
-      '~': path.join(process.cwd(), 'src')
+      '~': process.cwd()
     },
     plugins: [
       reactShimPlugin(),

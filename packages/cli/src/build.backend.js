@@ -27,7 +27,7 @@ export default async function build(options = {}) {
     sourcemap: watch,
     logLevel: 'silent',
     alias: {
-      '~': path.join(process.cwd(), 'src')
+      '~': process.cwd()
     },
     plugins: [
       cleanDistPlugin(),
