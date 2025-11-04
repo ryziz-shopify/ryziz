@@ -25,6 +25,10 @@ export default async function build(options = {}) {
     platform: 'node',
     minify: !watch,
     sourcemap: watch,
+    logLevel: 'silent',
+    alias: {
+      '~': path.join(process.cwd(), 'src')
+    },
     plugins: [
       cleanDistPlugin(),
       virtualRoutesPlugin(),

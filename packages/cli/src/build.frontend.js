@@ -22,6 +22,9 @@ export default async function build(options = {}) {
     inject: ['react-shim'],
     minify: !watch,
     sourcemap: watch,
+    alias: {
+      '~': path.join(process.cwd(), 'src')
+    },
     plugins: [
       reactShimPlugin(),
       cleanDistPlugin(),
