@@ -6,33 +6,26 @@ import { fileURLToPath } from 'url';
 const activeProcesses = new Set();
 const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// Wrapper: to enable runtime patching of dependencies from node_modules
-export function spawnWithLoader(command, args, options = {}) {
+// Spawn command with automatic bin path resolution for monorepo
+export function spawnCommand(command, args, options = {}) {
   if (['npm', 'node', 'npx'].includes(command)) {
     return spawn(command, args, options);
   }
 
-  // Only apply loader to packages we control
+  // Try to find binary in monorepo .bin directory
   const binPath = join(cliDir, '..', '..', '.bin', command);
 
   if (!existsSync(binPath)) {
     return spawn('npx', ['--yes', command, ...args], options);
   }
 
-  return spawn(binPath, args, {
-    ...options,
-    env: {
-      ...process.env,
-      ...options.env,
-      NODE_OPTIONS: `--loader ${process.env.RYZIZ_LOADER_PATH}`
-    }
-  });
+  return spawn(binPath, args, options);
 }
 
 export async function spawnWithCallback(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
-    const child = spawnWithLoader(command, args, {
+    const child = spawnCommand(command, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
       ...spawnOptions
     });

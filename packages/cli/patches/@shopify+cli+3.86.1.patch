@@ -1,0 +1,39 @@
+diff --git a/node_modules/@shopify/cli/dist/index.js b/node_modules/@shopify/cli/dist/index.js
+index b4e9131..407faa1 100644
+--- a/node_modules/@shopify/cli/dist/index.js
++++ b/node_modules/@shopify/cli/dist/index.js
+@@ -216876,24 +216876,21 @@ function buildOptionsForGeneratedConfigFile(options) {
+ }
+ function renderSuccessMessage(configFileName, appName, packageManager) {
+   renderSuccess({
+-    headline: `${configFileName} is now linked to "${appName}" on Shopify`,
+-    body: `Using ${configFileName} as your default config.`,
++    headline: `Linked successfully to "${appName}"`,
+     nextSteps: [
+-      [`Make updates to ${configFileName} in your local project`],
++      [`Edit ${configFileName} locally`],
+       [
+-        "To upload your config, run",
++        "Run to start development",
+         {
+-          command: formatPackageManagerCommand(packageManager, "shopify app deploy")
++          command: formatPackageManagerCommand(packageManager, "dev")
+         }
+-      ]
+-    ],
+-    reference: [
+-      {
+-        link: {
+-          label: "App configuration",
+-          url: "https://shopify.dev/docs/apps/tools/cli/configuration"
++      ],
++      [
++        "Run to deploy",
++        {
++          command: formatPackageManagerCommand(packageManager, "deploy")
+         }
+-      }
++      ]
+     ]
+   });
+ }

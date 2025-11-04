@@ -1,19 +1,5 @@
 #!/usr/bin/env node
 
-import { register } from 'node:module';
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-// Register the loader programmatically
-const currentFilePath = fileURLToPath(import.meta.url);
-const cliDir = path.dirname(currentFilePath);
-const loaderPath = path.join(cliDir, 'src', 'util.loader.js');
-register(pathToFileURL(loaderPath).href, import.meta.url);
-
-// Set loader path as source of truth for child processes
-process.env.RYZIZ_LOADER_PATH = loaderPath;
-
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
@@ -21,11 +7,40 @@ import buildFrontend from './src/build.frontend.js';
 import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
-import { spawnWithCallback, spawnWithLoader } from './src/util.spawn.js';
+import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 
 const program = new Command();
+
+// Run patch-package before any command
+program.hook('preAction', async (_, actionCommand) => {
+  // Find root from patch-package location and calculate relative patch dir
+  const rootDir = path.join(path.dirname(createRequire(import.meta.url).resolve('patch-package')), '..', '..');
+  const relativePatchDir = path.relative(
+    rootDir,
+    path.join(path.dirname(fileURLToPath(import.meta.url)), 'patches')
+  );
+
+  let noPatchFiles = false;
+
+  await spawnWithCallback('npx', ['patch-package', '--patch-dir', relativePatchDir], {
+    cwd: rootDir,
+    onLine(line) {
+      if (line.includes('No patch files found')) {
+        noPatchFiles = true;
+      }
+    }
+  });
+
+  if (!noPatchFiles && actionCommand.name() !== 'init') {
+    console.error('Patches applied. Please run the command again.');
+    process.exit(0);
+  }
+});
 
 program
   .name('ryziz')
@@ -290,7 +305,7 @@ program
   .command('link')
   .description('Link Shopify app config')
   .action(async () => {
-    spawnWithLoader('shopify', ['app', 'config', 'link'], {
+    spawnCommand('shopify', ['app', 'config', 'link'], {
       stdio: 'inherit'
     });
   });
