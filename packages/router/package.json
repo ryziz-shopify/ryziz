@@ -1,19 +1,17 @@
 {
   "name": "@ryziz-shopify/router",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "license": "MIT",
   "main": "index.js",
   "jsconfig": "./jsconfig.base.json",
   "type": "module",
   "dependencies": {
+    "@shopify/app-bridge-types": "^0.5.3",
+    "@shopify/polaris-types": "^1.0.1",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.5"
   },
   "peerDependencies": {
     "react": "^19.2.0"
-  },
-  "devDependencies": {
-    "@shopify/app-bridge-types": "^0.5.3",
-    "@shopify/polaris-types": "^1.0.1"
   }
 }
