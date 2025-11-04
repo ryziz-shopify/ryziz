@@ -1,11 +1,34 @@
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 const activeProcesses = new Set();
+
+// Wrapper: to enable runtime patching of dependencies from node_modules
+export function spawnWithLoader(command, args, options = {}) {
+  if (['npm', 'node', 'npx'].includes(command)) {
+    return spawn(command, args, options);
+  }
+
+  // Only apply loader to packages we control
+  if (!existsSync(join(options.cwd || process.cwd(), 'node_modules', '.bin', command))) {
+    return spawn(command, args, options);
+  }
+
+  return spawn(command, args, {
+    ...options,
+    env: {
+      ...process.env,
+      ...options.env,
+      NODE_OPTIONS: `--loader ${process.env.RYZIZ_LOADER_PATH}`
+    }
+  });
+}
 
 export async function spawnWithCallback(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
-    const child = spawn(command, args, {
+    const child = spawnWithLoader(command, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
       ...spawnOptions
     });

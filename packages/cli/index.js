@@ -11,6 +11,9 @@ const cliDir = path.dirname(currentFilePath);
 const loaderPath = path.join(cliDir, 'src', 'util.loader.js');
 register(pathToFileURL(loaderPath).href, import.meta.url);
 
+// Set loader path as source of truth for child processes
+process.env.RYZIZ_LOADER_PATH = loaderPath;
+
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
@@ -18,7 +21,7 @@ import buildFrontend from './src/build.frontend.js';
 import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
-import { spawnWithCallback } from './src/util.spawn.js';
+import { spawnWithCallback, spawnWithLoader } from './src/util.spawn.js';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 
@@ -170,8 +173,7 @@ program
                   createTask('Fetch secrets', (task) => {
                     return parallel(task, [
                       createTask('Load API secret', async () => {
-                        await spawnWithCallback('npx', [
-                          'shopify',
+                        await spawnWithCallback('shopify', [
                           'app',
                           'env',
                           'show',
@@ -244,8 +246,7 @@ program
           createTask('Start', (task) => {
             return parallel(task, [
               createTask('Start emulators', async () => {
-                await spawnWithCallback('npx', [
-                  'firebase',
+                await spawnWithCallback('firebase', [
                   'emulators:start'
                 ], {
                   cwd: '.ryziz/functions',
@@ -261,8 +262,7 @@ program
               }),
               createTask('Register app', async () => {
                 await deployShopify(shopify.tunnel, shopify.configPath);
-                await spawnWithCallback('npx', [
-                  'shopify',
+                await spawnWithCallback('shopify', [
                   'app',
                   'deploy',
                   '--config',
@@ -290,9 +290,8 @@ program
   .command('link')
   .description('Link Shopify app config')
   .action(async () => {
-    const { spawn } = await import('child_process');
-    spawn('npx', ['shopify', 'app', 'config', 'link'], {
-      stdio: 'inherit',
+    spawnWithLoader('shopify', ['app', 'config', 'link'], {
+      stdio: 'inherit'
     });
   });
 

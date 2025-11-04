@@ -13,6 +13,8 @@ export async function load(url, context, nextLoad) {
     patched = patchFirebaseTools(source);
   } else if (url.includes('listr2') && url.includes('dist/index.js')) {
     patched = patchListr2(source);
+  } else if (url.includes('@shopify/cli') && url.includes('dist/index.js')) {
+    patched = patchShopifyCli(source);
   }
 
   if (patched !== source) {
@@ -26,15 +28,17 @@ export async function load(url, context, nextLoad) {
   return result;
 }
 
+// Patch: to enable watching files in .ryziz folder
 function patchFirebaseTools(source) {
-  // Remove dotfile ignore pattern to allow watching .env files
-  // Before: /(^|[\/\\])\../,
-  // After:  (removed)
   return replaceAll(source, '/(^|[\\/\\\\])\\../, ', '');
 }
 
+// Patch: to show task errors without collapsing
 function patchListr2(source) {
-  const newMethod = `
+  let result = replaceAll(
+    source,
+    'style(task, output = false) {',
+    `
 	// Detect failures in deeply nested task hierarchies
 	hasAnyNestedFailedSubtasks(task) {
 		if (!task.hasSubtasks()) return false;
@@ -44,19 +48,74 @@ function patchListr2(source) {
 		}
 		return false;
 	}
-	`;
-
-  let result = replaceAll(
-    source,
-    'style(task, output = false) {',
-    newMethod + 'style(task, output = false) {'
+	` + 'style(task, output = false) {'
   );
 
-  // Enable nested subtask failure detection
   result = replaceAll(
     result,
     'task.subtasks.some((subtask) => subtask.hasFailed())',
     'this.hasAnyNestedFailedSubtasks(task)'
+  );
+
+  return result;
+}
+
+// Patch: to show clean message with dev/deploy commands
+function patchShopifyCli(source) {
+  let result = source;
+
+  result = replaceAll(
+    result,
+    'headline: `${configFileName} is now linked to "${appName}" on Shopify`',
+    'headline: `Linked successfully to "${appName}"`'
+  );
+
+  result = replaceAll(
+    result,
+    'body: `Using ${configFileName} as your default config.`,',
+    ''
+  );
+
+  result = replaceAll(
+    result,
+    `nextSteps: [
+      [\`Make updates to \${configFileName} in your local project\`],
+      [
+        "To upload your config, run",
+        {
+          command: formatPackageManagerCommand(packageManager, "shopify app deploy")
+        }
+      ]
+    ]`,
+    `nextSteps: [
+      [\`Edit \${configFileName} locally\`],
+      [
+        "Run to start development",
+        {
+          command: formatPackageManagerCommand(packageManager, "dev")
+        }
+      ],
+      [
+        "Run to deploy",
+        {
+          command: formatPackageManagerCommand(packageManager, "deploy")
+        }
+      ]
+    ]`
+  );
+
+  result = replaceAll(
+    result,
+    `,
+    reference: [
+      {
+        link: {
+          label: "App configuration",
+          url: "https://shopify.dev/docs/apps/tools/cli/configuration"
+        }
+      }
+    ]`,
+    ''
   );
 
   return result;
