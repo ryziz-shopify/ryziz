@@ -26,6 +26,10 @@ Read [docs/contribution-guide.md](docs/contribution-guide.md) for architecture o
 
 Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and conventions.
 
+## Backlog
+
+- [ ] Create template for Shopify private apps
+
 ## Version Management
 
 Automatic version bumping and publishing handled by git hooks:
