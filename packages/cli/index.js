@@ -245,7 +245,9 @@ program
             return parallel(task, [
               createTask('Start emulators', async () => {
                 await spawnWithCallback('firebase', [
-                  'emulators:start'
+                  'emulators:start',
+                  '--import=../emulator-data',
+                  '--export-on-exit=../emulator-data'
                 ], {
                   cwd: '.ryziz/functions',
                   onLine(line, { resolve, reject }) {
