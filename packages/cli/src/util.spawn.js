@@ -13,7 +13,7 @@ export function spawnWithLoader(command, args, options = {}) {
   }
 
   // Only apply loader to packages we control
-  const binPath = join(cliDir, '..', '..', 'node_modules', '.bin', command);
+  const binPath = join(cliDir, '..', '..', '.bin', command);
 
   if (!existsSync(binPath)) {
     return spawn('npx', ['--yes', command, ...args], options);
