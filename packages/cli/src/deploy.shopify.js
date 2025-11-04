@@ -11,12 +11,7 @@ export default async function deployShopify(tunnelUrl, filename) {
   const tomlPath = path.join(process.cwd(), filename);
   const tomlContent = fs.readFileSync(tomlPath, 'utf8');
   const tomlData = parse(tomlContent);
-
-  const currentOrigin = new URL(tomlData.application_url).origin;
-
-  const webhooks = await scanWebhookFiles();
-  const allTopics = webhooks.map(w => convertTopicFormat(w.topic));
-  const topics = allTopics.filter(t => !COMPLIANCE_TOPICS.includes(t));
+  const allTopics = (await scanWebhookFiles()).map(w => convertTopicFormat(w.topic));
 
   // Update the JavaScript object
   // Ensure application_url always ends with /app
@@ -28,7 +23,12 @@ export default async function deployShopify(tunnelUrl, filename) {
   }
 
   // Update webhooks
-  updateWebhooksSection(tomlData, topics, tunnelUrl);
+  updateWebhooksSection(
+    tomlData,
+    allTopics.filter(t => COMPLIANCE_TOPICS.includes(t)),
+    allTopics.filter(t => !COMPLIANCE_TOPICS.includes(t)),
+    tunnelUrl
+  );
 
   // Stringify back to TOML
   const updatedContent = stringify(tomlData);
@@ -91,13 +91,15 @@ export function readShopifyEnv(filename) {
   };
 }
 
-function updateWebhooksSection(tomlData, topics, url) {
-  const subscriptions = [
-    {
-      compliance_topics: COMPLIANCE_TOPICS,
+function updateWebhooksSection(tomlData, complianceTopics, topics, url) {
+  const subscriptions = [];
+
+  if (complianceTopics.length > 0) {
+    subscriptions.push({
+      compliance_topics: complianceTopics,
       uri: `${url}/webhook`
-    }
-  ];
+    });
+  }
 
   if (topics.length > 0) {
     subscriptions.push({
