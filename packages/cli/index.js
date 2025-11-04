@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --import=./src/util.loader.js
 
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
@@ -213,12 +213,12 @@ program
                   createTask('Write .env', async () => {
                     shopify.env.SHOPIFY_HOST_NAME = shopify.tunnel.replace(/^https?:\/\//, '');
 
-                    const envContent = Object.entries(shopify.env)
-                      .map(([key, value]) => `${key}=${value}`)
-                      .join('\n');
-
-                    const envPath = path.join(process.cwd(), '.ryziz/functions/.env');
-                    fs.writeFileSync(envPath, envContent);
+                    fs.writeFileSync(
+                      path.join(process.cwd(), '.ryziz/functions/.env'),
+                      Object.entries(shopify.env)
+                        .map(([key, value]) => `${key}=${value}`)
+                        .join('\n')
+                    );
                   })
                 ]);
               }),
