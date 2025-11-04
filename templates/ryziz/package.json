@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/ryziz",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -14,7 +14,7 @@
     "react": "^19.2.0"
   },
   "devDependencies": {
-    "@ryziz-shopify/cli": "^0.1.33"
+    "@ryziz-shopify/cli": "^0.1.34"
   },
   "scripts": {
     "dev": "ryziz dev",

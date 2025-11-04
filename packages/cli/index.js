@@ -1,4 +1,15 @@
-#!/usr/bin/env node --import=./node_modules/@ryziz-shopify/cli/src/util.loader.js
+#!/usr/bin/env node
+
+import { register } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Register the loader programmatically
+const currentFilePath = fileURLToPath(import.meta.url);
+const cliDir = path.dirname(currentFilePath);
+const loaderPath = path.join(cliDir, 'src', 'util.loader.js');
+register(pathToFileURL(loaderPath).href, import.meta.url);
 
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
@@ -10,8 +21,6 @@ import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback } from './src/util.spawn.js';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const program = new Command();
 
@@ -55,28 +64,28 @@ program
                 }
               }),
               createTask('Copy files to project', (task) => {
-                const allFiles = fs.readdirSync(ryzizPackagePath)
-                  .filter(file => file !== 'node_modules');
+                return parallel(task, fs.readdirSync(ryzizPackagePath)
+                  .filter(file => file !== 'node_modules')
+                  .map(file =>
+                    createTask(file, async () => {
+                      const source = path.join(ryzizPackagePath, file);
+                      const dest = path.join(targetDir, file);
 
-                return parallel(task, allFiles.map(file =>
-                  createTask(file, async () => {
-                    const source = path.join(ryzizPackagePath, file);
-                    const dest = path.join(targetDir, file);
-
-                    const stats = await fsPromises.stat(source);
-                    if (stats.isDirectory()) {
-                      await fsPromises.cp(source, dest, { recursive: true });
-                    } else {
-                      await fsPromises.copyFile(source, dest);
-                    }
-                  })
-                ));
+                      const stats = await fsPromises.stat(source);
+                      if (stats.isDirectory()) {
+                        await fsPromises.cp(source, dest, { recursive: true });
+                      } else {
+                        await fsPromises.copyFile(source, dest);
+                      }
+                    })
+                  ));
               }),
               createTask('Restore dotfiles', async () => {
-                const gitignoreSource = path.join(targetDir, 'gitignore');
-                const gitignoreDest = path.join(targetDir, '.gitignore');
-                if (fs.existsSync(gitignoreSource)) {
-                  await fsPromises.rename(gitignoreSource, gitignoreDest);
+                if (fs.existsSync(path.join(targetDir, 'gitignore'))) {
+                  await fsPromises.rename(
+                    path.join(targetDir, 'gitignore'),
+                    path.join(targetDir, '.gitignore')
+                  );
                 }
               }),
               createTask('Configure project', (task) => {
@@ -88,8 +97,7 @@ program
                     await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
                   }),
                   createTask('Set package name', async () => {
-                    const folderName = path.basename(process.cwd());
-                    await spawnWithCallback('npm', ['pkg', 'set', `name=${folderName}`]);
+                    await spawnWithCallback('npm', ['pkg', 'set', `name=${path.basename(process.cwd())}`]);
                   })
                 ]);
               })
@@ -99,7 +107,7 @@ program
             await spawnWithCallback('npm', ['install']);
           }),
           createTask('Done', () => {
-            task.title = 'Project ready';
+            task.title = 'Init completed';
             task.output = 'Next: npm run link, then npm run dev';
           })
         ]);
@@ -281,7 +289,7 @@ program
             ]);
           }),
           createTask('Done', () => {
-            task.title = 'Dev ready';
+            task.title = 'Dev started';
             task.output = shopify.tunnel;
           })
         ]);
