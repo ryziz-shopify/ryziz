@@ -38,6 +38,10 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Root cause:** `spawnWithCallback` doesn't capture/display stdout/stderr from child process
   - **Expected:** Show actual Shopify CLI error: `"This app is not approved to subscribe to webhook topics containing protected customer data"`
   - **Solution:** Capture and display last N lines of output when spawn fails, or buffer full output for error context
+- [ ] Add Firebase emulator data persistence between dev runs
+  - **Feature:** Save emulator data (Firestore, Auth, etc.) to persist between `npm run dev` sessions
+  - **Benefit:** Developers don't lose test data when restarting dev server
+  - **Implementation:** Configure Firebase emulator `--export-on-exit` and `--import` flags to save/load data from `.ryziz/emulator-data/`
 
 ## Version Management
 
