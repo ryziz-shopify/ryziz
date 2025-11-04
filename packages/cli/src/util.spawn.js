@@ -95,14 +95,21 @@ export async function spawnWithCallback(command, args, options = {}) {
 
 process.on('SIGINT', () => {
   activeProcesses.forEach(child => {
-    child.kill('SIGTERM');
+    child.kill('SIGINT');
   });
-  process.exit(0);
+
+  // Wait for graceful shutdown (e.g., Firebase emulator export)
+  setTimeout(() => {
+    process.exit(0);
+  }, 3000);
 });
 
 process.on('SIGTERM', () => {
   activeProcesses.forEach(child => {
     child.kill('SIGTERM');
   });
-  process.exit(0);
+
+  setTimeout(() => {
+    process.exit(0);
+  }, 3000);
 });
