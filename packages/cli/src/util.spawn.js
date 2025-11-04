@@ -14,7 +14,7 @@ export function spawnWithLoader(command, args, options = {}) {
   const binPath = join(options.cwd || process.cwd(), 'node_modules', '.bin', command);
 
   if (!existsSync(binPath)) {
-    return spawn(command, args, options);
+    return spawn('npx', ['--yes', command, ...args], options);
   }
 
   return spawn(binPath, args, {
