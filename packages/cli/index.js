@@ -190,9 +190,7 @@ program
                         });
                       }),
                       createTask('Create tunnel', async () => {
-                        await spawnWithCallback('npx', [
-                          '--yes',
-                          'cloudflared',
+                        await spawnWithCallback('cloudflared', [
                           'tunnel',
                           '--url',
                           'http://localhost:8080'
