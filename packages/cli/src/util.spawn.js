@@ -11,11 +11,13 @@ export function spawnWithLoader(command, args, options = {}) {
   }
 
   // Only apply loader to packages we control
-  if (!existsSync(join(options.cwd || process.cwd(), 'node_modules', '.bin', command))) {
+  const binPath = join(options.cwd || process.cwd(), 'node_modules', '.bin', command);
+
+  if (!existsSync(binPath)) {
     return spawn(command, args, options);
   }
 
-  return spawn(command, args, {
+  return spawn(binPath, args, {
     ...options,
     env: {
       ...process.env,
