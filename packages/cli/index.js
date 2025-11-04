@@ -95,16 +95,8 @@ program
               })
             ]);
           }),
-          createTask('Dependencies', (task) => {
-            return sequential(task, [
-              createTask('Install all packages', async () => {
-                await spawnWithCallback('npm', ['install']);
-              }),
-              createTask('Update Ryziz packages', async () => {
-                await spawnWithCallback('npm', ['install', '@ryziz-shopify/router@latest', '@ryziz-shopify/functions@latest', '--save']);
-                await spawnWithCallback('npm', ['install', '@ryziz-shopify/cli@latest', '--save-dev']);
-              })
-            ]);
+          createTask('Install dependencies', async () => {
+            await spawnWithCallback('npm', ['install']);
           }),
           createTask('Done', () => {
             task.title = 'Project ready';

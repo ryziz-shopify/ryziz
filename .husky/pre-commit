@@ -38,12 +38,54 @@ if echo "$staged_files" | grep "^packages/router/" | grep -v "package.json$" | g
   bumped_count=$((bumped_count + 1))
 fi
 
-# Ryziz package
+# Ryziz package - sync dependencies with core packages
+echo "🔄 Syncing Ryziz template dependencies..."
+template_updated=false
+
+# Read current package versions
+cli_version=$(node -p "require('./packages/cli/package.json').version")
+functions_version=$(node -p "require('./packages/functions/package.json').version")
+router_version=$(node -p "require('./packages/router/package.json').version")
+
+# Read template dependencies
+template_cli=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/cli'] || 'latest'")
+template_functions=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/functions'] || 'latest'")
+template_router=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/router'] || 'latest'")
+
+# Update template dependencies if versions don't match
+if [ "$template_cli" != "^$cli_version" ]; then
+  echo "  📝 Updating @ryziz-shopify/cli: $template_cli -> ^$cli_version"
+  (cd templates/ryziz && npm pkg set dependencies.@ryziz-shopify/cli="^$cli_version")
+  template_updated=true
+fi
+
+if [ "$template_functions" != "^$functions_version" ]; then
+  echo "  📝 Updating @ryziz-shopify/functions: $template_functions -> ^$functions_version"
+  (cd templates/ryziz && npm pkg set dependencies.@ryziz-shopify/functions="^$functions_version")
+  template_updated=true
+fi
+
+if [ "$template_router" != "^$router_version" ]; then
+  echo "  📝 Updating @ryziz-shopify/router: $template_router -> ^$router_version"
+  (cd templates/ryziz && npm pkg set dependencies.@ryziz-shopify/router="^$router_version")
+  template_updated=true
+fi
+
+# Bump template version if dependencies were updated OR if template files changed
+template_files_changed=false
 if echo "$staged_files" | grep "^templates/ryziz/" | grep -v "package.json$" | grep -q .; then
+  template_files_changed=true
+fi
+
+if [ "$template_updated" = true ] || [ "$template_files_changed" = true ]; then
   echo "📦 Bumping version for @ryziz-shopify/ryziz..."
   (cd templates/ryziz && npm version patch --no-git-tag-version)
   git add templates/ryziz/package.json package-lock.json
   bumped_count=$((bumped_count + 1))
+
+  if [ "$template_updated" = true ]; then
+    echo "  ✅ Template dependencies synced"
+  fi
 fi
 
 if [ "$bumped_count" -eq 0 ]; then
