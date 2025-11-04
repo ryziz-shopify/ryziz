@@ -29,6 +29,8 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 ## Backlog
 
 - [ ] Create template for Shopify private apps
+- [ ] Implement Polaris Web Components in app template
+- [ ] Migrate from `--loader` to `register()` API to remove Node.js experimental warning
 
 ## Version Management
 
