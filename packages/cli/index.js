@@ -105,6 +105,7 @@ program
           }),
           createTask('Install dependencies', async () => {
             await spawnWithCallback('npm', ['install']);
+            await spawnWithCallback('npm', ['install', '@ryziz-shopify/cli', '--save-dev']);
           }),
           createTask('Done', () => {
             task.title = 'Init completed';
