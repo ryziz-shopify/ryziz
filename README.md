@@ -42,6 +42,11 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Feature:** Save emulator data (Firestore, Auth, etc.) to persist between `npm run dev` sessions
   - **Benefit:** Developers don't lose test data when restarting dev server
   - **Implementation:** Configure Firebase emulator `--export-on-exit` and `--import` flags to save/load data from `.ryziz/emulator-data/`
+- [ ] Create production deploy command
+  - **Feature:** `npm run deploy` command to deploy app to production
+  - **Flow:** Build frontend/backend → Deploy to Firebase (functions + hosting) → Update Shopify app config with production URLs → Deploy Shopify app version
+  - **Current state:** No deploy command exists, users must manually deploy Firebase and Shopify separately
+  - **Implementation:** Add `ryziz deploy` command that orchestrates full deployment pipeline
 
 ## Version Management
 
