@@ -1,8 +1,10 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const activeProcesses = new Set();
+const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 // Wrapper: to enable runtime patching of dependencies from node_modules
 export function spawnWithLoader(command, args, options = {}) {
@@ -11,7 +13,7 @@ export function spawnWithLoader(command, args, options = {}) {
   }
 
   // Only apply loader to packages we control
-  const binPath = join(options.cwd || process.cwd(), 'node_modules', '.bin', command);
+  const binPath = join(cliDir, '..', '..', 'node_modules', '.bin', command);
 
   if (!existsSync(binPath)) {
     return spawn('npx', ['--yes', command, ...args], options);
@@ -97,19 +99,10 @@ process.on('SIGINT', () => {
   activeProcesses.forEach(child => {
     child.kill('SIGINT');
   });
-
-  // Wait for graceful shutdown (e.g., Firebase emulator export)
-  setTimeout(() => {
-    process.exit(0);
-  }, 3000);
 });
 
 process.on('SIGTERM', () => {
   activeProcesses.forEach(child => {
     child.kill('SIGTERM');
   });
-
-  setTimeout(() => {
-    process.exit(0);
-  }, 3000);
 });
