@@ -48,14 +48,14 @@ functions_version=$(node -p "require('./packages/functions/package.json').versio
 router_version=$(node -p "require('./packages/router/package.json').version")
 
 # Read template dependencies
-template_cli=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/cli'] || 'latest'")
+template_cli=$(node -p "require('./templates/ryziz/package.json').devDependencies?.['@ryziz-shopify/cli'] || 'latest'")
 template_functions=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/functions'] || 'latest'")
 template_router=$(node -p "require('./templates/ryziz/package.json').dependencies['@ryziz-shopify/router'] || 'latest'")
 
 # Update template dependencies if versions don't match
 if [ "$template_cli" != "^$cli_version" ]; then
   echo "  📝 Updating @ryziz-shopify/cli: $template_cli -> ^$cli_version"
-  (cd templates/ryziz && npm pkg set dependencies.@ryziz-shopify/cli="^$cli_version")
+  (cd templates/ryziz && npm pkg set devDependencies.@ryziz-shopify/cli="^$cli_version")
   template_updated=true
 fi
 

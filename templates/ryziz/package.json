@@ -9,10 +9,12 @@
   },
   "bin": "node_modules/@ryziz-shopify/cli/index.js",
   "dependencies": {
-    "@ryziz-shopify/cli": "^0.1.33",
     "@ryziz-shopify/functions": "^0.1.3",
     "@ryziz-shopify/router": "^0.1.5",
     "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@ryziz-shopify/cli": "^0.1.33"
   },
   "scripts": {
     "dev": "ryziz dev",
