@@ -1,4 +1,4 @@
-#!/usr/bin/env node --import=./src/util.loader.js
+#!/usr/bin/env node --import=./node_modules/@ryziz-shopify/cli/src/util.loader.js
 
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';

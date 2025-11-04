@@ -1,8 +1,4 @@
-/**
- * Runtime module patcher using Node.js ESM loader hooks
- * Applies patches to firebase-tools and listr2 without modifying node_modules
- */
-
+// Modify dependency behavior at runtime to avoid maintaining forked packages
 export async function load(url, context, nextLoad) {
   const result = await nextLoad(url, context);
 
@@ -39,7 +35,7 @@ function patchFirebaseTools(source) {
 
 function patchListr2(source) {
   const newMethod = `
-	// CUSTOM: Helper to recursively check for failed subtasks (including nested)
+	// Detect failures in deeply nested task hierarchies
 	hasAnyNestedFailedSubtasks(task) {
 		if (!task.hasSubtasks()) return false;
 		for (const subtask of task.subtasks) {
@@ -50,14 +46,13 @@ function patchListr2(source) {
 	}
 	`;
 
-  // Insert method before style()
   let result = replaceAll(
     source,
     'style(task, output = false) {',
     newMethod + 'style(task, output = false) {'
   );
 
-  // Replace shallow check with deep check
+  // Enable nested subtask failure detection
   result = replaceAll(
     result,
     'task.subtasks.some((subtask) => subtask.hasFailed())',
