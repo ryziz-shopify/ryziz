@@ -33,6 +33,11 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 - [ ] Migrate from `--loader` to `register()` API to remove Node.js experimental warning
   - Error: `ExperimentalWarning: '--experimental-loader' may be removed in the future; instead use 'register()'`
 - [ ] Fix Firebase emulator not stopping when dev command is interrupted
+- [ ] Improve error messages when Shopify CLI commands fail
+  - **Problem:** When using protected customer data webhooks without approval, error shows: `"shopify app deploy failed with code 1"` (not helpful)
+  - **Root cause:** `spawnWithCallback` doesn't capture/display stdout/stderr from child process
+  - **Expected:** Show actual Shopify CLI error: `"This app is not approved to subscribe to webhook topics containing protected customer data"`
+  - **Solution:** Capture and display last N lines of output when spawn fails, or buffer full output for error context
 
 ## Version Management
 
