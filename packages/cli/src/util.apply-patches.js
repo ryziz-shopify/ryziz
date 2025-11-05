@@ -47,13 +47,13 @@ const patches = {
     },
     {
       find: `reference: [
-              {
-                link: {
-                  label: "App configuration",
-                  url: "https://shopify.dev/docs/apps/tools/cli/configuration"
-                }
-              }
-            ]`,
+      {
+        link: {
+          label: "App configuration",
+          url: "https://shopify.dev/docs/apps/tools/cli/configuration"
+        }
+      }
+    ]`,
       replaceWith: ''
     }
   ]
