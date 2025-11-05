@@ -65,9 +65,6 @@ program
               }),
               createTask('Configure project', (task) => {
                 return sequential(task, [
-                  createTask('Initialize git', async () => {
-                    await spawnWithCallback('git', ['init']);
-                  }),
                   createTask('Clean package config', async () => {
                     await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
                   }),

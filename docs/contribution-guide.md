@@ -87,7 +87,7 @@ Implementation in `packages/cli/index.js` - Search for `.command('init')`
 **High-level flow:**
 1. **Scaffold** - Locate template package and copy files to current directory
 2. **Dependencies** - Install packages from template, then update to latest versions
-3. **Finalize** - Initialize git repository and clean template-specific config
+3. **Finalize** - Clean template-specific config
 
 ### Key Architecture Decisions
 
