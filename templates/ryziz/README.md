@@ -54,7 +54,7 @@ Development server starts on localhost with Firebase emulators and Cloudflare tu
 
 **src/app.*.jsx** - Embedded app routes (inside Shopify Admin)
 
-**src/api.*.js** - API endpoints with Shopify session
+**src/api.*.js** - API endpoints
 
 **src/webhooks.*.js** - Webhook handlers with auto-registration
 

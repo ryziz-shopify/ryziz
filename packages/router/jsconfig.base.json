@@ -1,10 +1,5 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "baseUrl": "../../../",
-    "paths": {
-      "@ryziz-shopify/*": ["./*"],
-      "~/*": ["./*"]
-    }
+    "jsx": "react"
   }
 }

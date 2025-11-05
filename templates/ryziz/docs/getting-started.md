@@ -184,14 +184,15 @@ export function POST(req, res) {
 
 ### Access Shopify Session
 
-All API routes have access to Shopify session via `req.shopify`.
+Wrap your API route with `withShopify` to get access to authenticated Shopify session and GraphQL client.
 
 **Example - Fetch products from Shopify:**
 ```js
-export async function GET(req, res) {
-  const { shopify } = req;
+import { withShopify } from '@ryziz-shopify/functions';
 
-  const products = await shopify.graphql(`
+export const GET = withShopify(async (req, res) => {
+  // req.shopify is now available with authenticated session
+  const products = await req.shopify.graphql(`
     query {
       products(first: 10) {
         edges {
@@ -205,19 +206,25 @@ export async function GET(req, res) {
   `);
 
   res.json(products);
+});
+```
+
+**Example - Public API (no auth required):**
+```js
+export function GET(req, res) {
+  // No withShopify wrapper = no auth required
+  res.json({ message: 'Public endpoint' });
 }
 ```
 
 ### Access Firestore
 
-Firebase Admin SDK available via standard import:
+Firestore database available via `db` export:
 
 ```js
-import admin from 'firebase-admin';
+import { db } from '@ryziz-shopify/functions';
 
 export async function GET(req, res) {
-  const db = admin.firestore();
-
   const snapshot = await db.collection('settings').get();
   const data = snapshot.docs.map(doc => doc.data());
 
@@ -230,7 +237,9 @@ export async function GET(req, res) {
 Use try/catch with proper status codes:
 
 ```js
-export async function POST(req, res) {
+import { withShopify } from '@ryziz-shopify/functions';
+
+export const POST = withShopify(async (req, res) => {
   try {
     const { productId } = req.body;
 
@@ -238,13 +247,19 @@ export async function POST(req, res) {
       return res.status(400).json({ error: 'productId required' });
     }
 
-    // Process request
-    res.json({ success: true });
+    // Process request with Shopify API
+    const product = await req.shopify.graphql(`
+      query getProduct($id: ID!) {
+        product(id: $id) { id title }
+      }
+    `, { id: productId });
+
+    res.json({ success: true, product });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
-}
+});
 ```
 
 ## Webhooks
@@ -264,13 +279,14 @@ webhooks.products-update.js     → Handles PRODUCTS_UPDATE
 
 **Example file (src/webhooks.app-uninstalled.js):**
 ```js
+import { db } from '@ryziz-shopify/functions';
+
 export const TOPIC = 'APP_UNINSTALLED';
 
 export async function handle(topic, shop, body) {
   console.log('App uninstalled:', { topic, shop, body });
 
   // Clean up shop data
-  const db = admin.firestore();
   await db.collection('shops').doc(shop).delete();
 }
 ```
@@ -398,22 +414,20 @@ export default function CreateProduct() {
 From API endpoint:
 
 ```js
-import admin from 'firebase-admin';
+import { withShopify, db } from '@ryziz-shopify/functions';
 
-export async function POST(req, res) {
+export const POST = withShopify(async (req, res) => {
   const { shop } = req.shopify.session;
   const { productId, metadata } = req.body;
-
-  const db = admin.firestore();
 
   await db.collection('products').doc(productId).set({
     shop,
     metadata,
-    createdAt: admin.firestore.FieldValue.serverTimestamp()
+    createdAt: new Date()
   });
 
   res.json({ success: true });
-}
+});
 ```
 
 ### Query Firestore
@@ -421,12 +435,11 @@ export async function POST(req, res) {
 From API endpoint:
 
 ```js
-import admin from 'firebase-admin';
+import { withShopify, db } from '@ryziz-shopify/functions';
 
-export async function GET(req, res) {
+export const GET = withShopify(async (req, res) => {
   const { shop } = req.shopify.session;
 
-  const db = admin.firestore();
   const snapshot = await db
     .collection('products')
     .where('shop', '==', shop)
@@ -440,7 +453,7 @@ export async function GET(req, res) {
   }));
 
   res.json(products);
-}
+});
 ```
 
 ## Development Workflow
