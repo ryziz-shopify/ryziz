@@ -1,5 +1,15 @@
 #!/usr/bin/env node
 
+import { register } from 'node:module';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const patchesPath = path.join(__dirname, 'src/util.patches.mjs');
+
+register(pathToFileURL(patchesPath), import.meta.url);
+
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
 import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
@@ -8,7 +18,6 @@ import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
-import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 

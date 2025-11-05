@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const activeProcesses = new Set();
 const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,10 +25,14 @@ export function spawnCommand(command, args, options = {}) {
 export async function spawnWithCallback(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
-    const child = spawnCommand(command, args, {
+
+    // Inject patcher hook for firebase commands
+    const finalOptions = injectPatcherHook(command, {
       stdio: ['inherit', 'pipe', 'pipe'],
       ...spawnOptions
     });
+
+    const child = spawnCommand(command, args, finalOptions);
 
     activeProcesses.add(child);
 
@@ -99,3 +103,18 @@ process.on('SIGTERM', () => {
     child.kill('SIGTERM');
   });
 });
+
+function injectPatcherHook(command, options) {
+  if (command !== 'firebase') return options;
+
+  const patchesPath = join(dirname(fileURLToPath(import.meta.url)), 'util.patches.mjs');
+
+  return {
+    ...options,
+    env: {
+      ...process.env,
+      ...options.env,
+      NODE_OPTIONS: `--import ${pathToFileURL(patchesPath).href}`
+    }
+  };
+}
