@@ -8,31 +8,30 @@ const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 // Spawn command with automatic bin path resolution for monorepo
 export function spawnCommand(command, args, options = {}) {
+  const finalOptions = injectPatcherHook(options);
+
   if (['npm', 'node', 'npx'].includes(command)) {
-    return spawn(command, args, options);
+    return spawn(command, args, finalOptions);
   }
 
   // Try to find binary in monorepo .bin directory
   const binPath = join(cliDir, '..', '..', '.bin', command);
 
   if (!existsSync(binPath)) {
-    return spawn('npx', ['--yes', command, ...args], options);
+    return spawn('npx', ['--yes', command, ...args], finalOptions);
   }
 
-  return spawn(binPath, args, options);
+  return spawn(binPath, args, finalOptions);
 }
 
 export async function spawnWithCallback(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
 
-    // Inject patcher hook for firebase commands
-    const finalOptions = injectPatcherHook(command, {
+    const child = spawnCommand(command, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
       ...spawnOptions
     });
-
-    const child = spawnCommand(command, args, finalOptions);
 
     activeProcesses.add(child);
 
@@ -104,9 +103,7 @@ process.on('SIGTERM', () => {
   });
 });
 
-function injectPatcherHook(command, options) {
-  if (command !== 'firebase') return options;
-
+function injectPatcherHook(options) {
   const patchesPath = join(dirname(fileURLToPath(import.meta.url)), 'util.patches.mjs');
 
   return {
