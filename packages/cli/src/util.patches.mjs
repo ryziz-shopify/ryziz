@@ -6,7 +6,7 @@
 
 const patches = {
   'firebase-tools/lib/emulator/functionsEmulator.js': [
-    { find: '/(^|[\/\\\\])\\../, ', replaceWith: '' }
+    { find: '/(^|[\\/\\\\])\\\\.../,', replaceWith: '' }
   ],
 
   'listr2/dist/index.js': [
