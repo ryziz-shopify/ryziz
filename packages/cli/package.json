@@ -1,10 +1,7 @@
 {
   "name": "@ryziz-shopify/cli",
-  "version": "0.1.46",
+  "version": "0.1.47",
   "license": "MIT",
-  "scripts": {
-    "postinstall": "cd ../.. && patch-package --patch-dir packages/cli/patches"
-  },
   "dependencies": {
     "@inquirer/prompts": "^7.9.0",
     "@listr2/prompt-adapter-inquirer": "^3.0.5",
@@ -14,7 +11,6 @@
     "firebase-tools": "^14.23.0",
     "glob": "^11.0.3",
     "listr2": "^9.0.5",
-    "patch-package": "^8.0.1",
     "toml-patch": "^0.2.3"
   },
   "bin": {

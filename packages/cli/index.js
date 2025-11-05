@@ -8,39 +8,11 @@ import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 
 const program = new Command();
-
-// Run patch-package before any command
-program.hook('preAction', async (_, actionCommand) => {
-  // Find root from patch-package location and calculate relative patch dir
-  const rootDir = path.join(path.dirname(createRequire(import.meta.url).resolve('patch-package')), '..', '..');
-  const relativePatchDir = path.relative(
-    rootDir,
-    path.join(path.dirname(fileURLToPath(import.meta.url)), 'patches')
-  );
-
-  let noPatchFiles = false;
-
-  await spawnWithCallback('npx', ['patch-package', '--patch-dir', relativePatchDir], {
-    cwd: rootDir,
-    onLine(line) {
-      if (line.includes('No patch files found')) {
-        noPatchFiles = true;
-      }
-    }
-  });
-
-  if (!noPatchFiles && actionCommand.name() !== 'init') {
-    console.error('Patches applied. Please run the command again.');
-    process.exit(0);
-  }
-});
 
 program
   .name('ryziz')

@@ -30,8 +30,6 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 
 - [ ] Create template for Shopify private apps
 - [ ] Implement Polaris Web Components in app template
-- [ ] Migrate from `--loader` to `register()` API to remove Node.js experimental warning
-  - Error: `ExperimentalWarning: '--experimental-loader' may be removed in the future; instead use 'register()'`
 - [ ] Fix Firebase emulator not stopping when dev command is interrupted
 - [ ] Improve error messages when Shopify CLI commands fail
   - **Problem:** When using protected customer data webhooks without approval, error shows: `"shopify app deploy failed with code 1"` (not helpful)
