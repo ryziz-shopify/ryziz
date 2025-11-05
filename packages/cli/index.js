@@ -10,6 +10,7 @@ import buildBackend from './src/build.backend.js';
 import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
+import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 
