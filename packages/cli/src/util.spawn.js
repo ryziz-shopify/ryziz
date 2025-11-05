@@ -1,27 +1,26 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 
 const activeProcesses = new Set();
 const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 // Spawn command with automatic bin path resolution for monorepo
 export function spawnCommand(command, args, options = {}) {
-  const finalOptions = injectPatcherHook(options);
 
   if (['npm', 'node', 'npx'].includes(command)) {
-    return spawn(command, args, finalOptions);
+    return spawn(command, args, options);
   }
 
   // Try to find binary in monorepo .bin directory
   const binPath = join(cliDir, '..', '..', '.bin', command);
 
   if (!existsSync(binPath)) {
-    return spawn('npx', ['--yes', command, ...args], finalOptions);
+    return spawn('npx', ['--yes', command, ...args], options);
   }
 
-  return spawn(binPath, args, finalOptions);
+  return spawn(binPath, args, options);
 }
 
 export async function spawnWithCallback(command, args, options = {}) {
@@ -102,16 +101,3 @@ process.on('SIGTERM', () => {
     child.kill('SIGTERM');
   });
 });
-
-function injectPatcherHook(options) {
-  const patchesPath = join(dirname(fileURLToPath(import.meta.url)), 'util.patches.mjs');
-
-  return {
-    ...options,
-    env: {
-      ...process.env,
-      ...options.env,
-      NODE_OPTIONS: `--import ${pathToFileURL(patchesPath).href}`
-    }
-  };
-}

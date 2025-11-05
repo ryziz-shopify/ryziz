@@ -1,14 +1,6 @@
 #!/usr/bin/env node
 
-import { register } from 'node:module';
-import { pathToFileURL, fileURLToPath } from 'node:url';
-import path from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const patchesPath = path.join(__dirname, 'src/util.patches.mjs');
-
-register(pathToFileURL(patchesPath), import.meta.url);
+import './src/util.apply-patches.js';
 
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
