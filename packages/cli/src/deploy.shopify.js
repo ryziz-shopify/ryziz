@@ -4,6 +4,7 @@ import { glob } from 'glob';
 import { parse, stringify } from 'toml-patch';
 import { select } from '@inquirer/prompts';
 import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
+import { createTask } from './util.task.js';
 import { scanWebhookFiles } from './build.backend.js';
 
 const CACHE_PATH = path.join(process.cwd(), '.ryziz/cache.json');
@@ -98,45 +99,36 @@ export function createSelectConfigTask(ctx, options) {
   let fromCache = false;
 
   return [
-    {
-      title: 'Scan configs',
-      task: async () => {
-        const result = await scanShopifyConfigs(options.reset);
-        configs = result.configs;
-        fromCache = result.fromCache;
+    createTask('Scan configs', async () => {
+      const result = await scanShopifyConfigs(options.reset);
+      configs = result.configs;
+      fromCache = result.fromCache;
 
-        if (configs.length === 0) {
-          throw new Error('No Shopify config found. Try running: npm run link');
-        }
+      if (configs.length === 0) {
+        throw new Error('No Shopify config found. Try running: npm run link');
       }
-    },
-    {
-      title: 'Choose config',
-      task: async (_, task) => {
-        if (configs.length === 1) {
-          ctx.configPath = configs[0].value;
-          return;
-        }
+    }),
+    createTask('Choose config', async (task) => {
+      if (configs.length === 1) {
+        ctx.configPath = configs[0].value;
+        return;
+      }
 
-        ctx.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
-          message: 'Select Shopify config',
-          choices: configs.map(c => ({
-            name: `${c.label} (${c.name})`,
-            value: c.value
-          }))
-        });
-        writeCache({ shopifyConfig: ctx.configPath });
-      }
-    },
-    {
-      title: 'Done',
-      task: (_, task) => {
-        task.title = 'Config selected';
-        task.output = fromCache
-          ? `${ctx.configPath} (cached, use --reset to change)`
-          : ctx.configPath;
-      }
-    }
+      ctx.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
+        message: 'Select Shopify config',
+        choices: configs.map(c => ({
+          name: `${c.label} (${c.name})`,
+          value: c.value
+        }))
+      });
+      writeCache({ shopifyConfig: ctx.configPath });
+    }),
+    createTask('Done', (task) => {
+      task.title = 'Config selected';
+      task.output = fromCache
+        ? `${ctx.configPath} (cached, use --reset to change)`
+        : ctx.configPath;
+    })
   ];
 }
 

@@ -28,6 +28,20 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 
 ## Backlog
 
+- [ ] Refactor deploy domain files for better code organization
+  - **Issues:**
+    - `deploy.shopify.js` mixes concerns: config management, cache, env reading, task creation
+    - `deploy.firestore.js` has Firebase app initialization that could fail on re-init
+    - Cache logic (`readCache/writeCache`) could be extracted to `util.cache.js`
+    - Service account prompt pattern could be reusable
+    - No progress feedback for large Firestore collections (100k+ docs)
+  - **Potential improvements:**
+    - Extract cache utilities to separate file (single responsibility)
+    - Standardize config selection pattern (Shopify config vs service account path)
+    - Add progress reporting for long-running operations
+    - Better error handling for Firebase app initialization
+    - Consider creating `util.prompt.js` for reusable prompt patterns
+  - **Goal:** Clearer separation of concerns, less duplication, more maintainable
 - [ ] Create template for Shopify private apps
 - [ ] Implement Polaris Web Components in app template
 - [ ] Fix Firebase emulator not stopping when dev command is interrupted

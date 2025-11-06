@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import buildFrontend from './src/build.frontend.js';
 import buildBackend from './src/build.backend.js';
 import deployShopify, { readShopifyEnv, createSelectConfigTask } from './src/deploy.shopify.js';
+import { createPullTasks } from './src/deploy.firestore.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
 import path from 'path';
@@ -331,6 +332,22 @@ program
         }
       })
     ], { ctx });
+  });
+
+program
+  .command('pull')
+  .description('Pull production Firestore data to local')
+  .action(async () => {
+    await runTasks([
+      createTask('Pull', (task) => {
+        return createPullTasks(task);
+      }, {
+        rendererOptions: {
+          outputBar: Infinity,
+          persistentOutput: true
+        }
+      })
+    ]);
   });
 
 program.parse();
