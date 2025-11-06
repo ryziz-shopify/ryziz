@@ -5,7 +5,7 @@ import './src/util.apply-patches.js';
 import { Command } from 'commander';
 import buildFrontend from './src/build.frontend.js';
 import buildBackend from './src/build.backend.js';
-import deployShopify, { readShopifyEnv, createSelectConfigTask } from './src/deploy.shopify.js';
+import deployShopify, { readShopifyEnv, createSelectConfigTask, getProductionHostname } from './src/deploy.shopify.js';
 import { createPullTasks } from './src/deploy.firestore.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
@@ -256,7 +256,8 @@ program
       shopifyOnly: options.shopifyOnly,
       shopify: {
         configPath: '',
-        env: {}
+        env: {},
+        productionUrl: ''
       }
     };
 
@@ -273,6 +274,45 @@ program
         return sequential(task, [
           createTask('Load environment', async () => {
             ctx.shopify.env = readShopifyEnv(ctx.shopify.configPath);
+          }),
+          createTask('Setup environment', (task) => {
+            return sequential(task, [
+              createTask('Fetch API secret', async () => {
+                await spawnWithCallback('shopify', [
+                  'app',
+                  'env',
+                  'show',
+                  '--config',
+                  ctx.shopify.configPath
+                ], {
+                  onLine(line, { resolve }) {
+                    const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
+                    if (match) {
+                      ctx.shopify.env.SHOPIFY_API_SECRET = match[1].trim();
+                      resolve();
+                    }
+                  }
+                });
+              }),
+              createTask('Get production hostname', async () => {
+                ctx.shopify.productionUrl = getProductionHostname();
+              }),
+              createTask('Write .env', async () => {
+                ctx.shopify.env.SHOPIFY_HOST_NAME = ctx.shopify.productionUrl.replace(/^https?:\/\//, '');
+
+                fs.writeFileSync(
+                  path.join(process.cwd(), '.ryziz/functions/.env'),
+                  Object.entries(ctx.shopify.env)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join('\n')
+                );
+              }),
+              createTask('Update Shopify config', async () => {
+                await deployShopify(ctx.shopify.productionUrl, ctx.shopify.configPath);
+              })
+            ]);
+          }, {
+            skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
           }),
           createTask('Build production', (task) => {
             return parallel(task, [

@@ -155,3 +155,20 @@ function updateWebhooksSection(tomlData, complianceTopics, topics, url) {
 function convertTopicFormat(topic) {
   return topic.toLowerCase().replace('_', '/');
 }
+
+export function getProductionHostname() {
+  const firebaseRcPath = path.join(process.cwd(), '.ryziz/.firebaserc');
+
+  if (!fs.existsSync(firebaseRcPath)) {
+    throw new Error('.ryziz/.firebaserc not found. Make sure Firebase is initialized.');
+  }
+
+  const firebaseRc = JSON.parse(fs.readFileSync(firebaseRcPath, 'utf8'));
+  const projectId = firebaseRc.projects?.default;
+
+  if (!projectId) {
+    throw new Error('Firebase project ID not found in .firebaserc');
+  }
+
+  return `https://${projectId}.web.app`;
+}
