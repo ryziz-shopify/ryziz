@@ -3,11 +3,9 @@
 import './src/util.apply-patches.js';
 
 import { Command } from 'commander';
-import { select } from '@inquirer/prompts';
-import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
 import buildFrontend from './src/build.frontend.js';
 import buildBackend from './src/build.backend.js';
-import deployShopify, { scanShopifyConfigs, writeCache, readShopifyEnv } from './src/deploy.shopify.js';
+import deployShopify, { readShopifyEnv, createSelectConfigTask } from './src/deploy.shopify.js';
 import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
 import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
 import path from 'path';
@@ -106,41 +104,7 @@ program
 
     await runTasks([
       createTask('Select config', (task) => {
-        let configs = [];
-        let fromCache = false;
-
-        return sequential(task, [
-          createTask('Scan configs', async () => {
-            const result = await scanShopifyConfigs(options.reset);
-            configs = result.configs;
-            fromCache = result.fromCache;
-
-            if (configs.length === 0) {
-              throw new Error('No Shopify config found. Try running: npm run link');
-            }
-          }),
-          createTask('Choose config', async (task) => {
-            if (configs.length === 1) {
-              shopify.configPath = configs[0].value;
-              return;
-            }
-
-            shopify.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
-              message: 'Select Shopify config',
-              choices: configs.map(c => ({
-                name: `${c.label} (${c.name})`,
-                value: c.value
-              }))
-            });
-            writeCache({ shopifyConfig: shopify.configPath });
-          }),
-          createTask('Done', () => {
-            task.title = 'Config selected';
-            task.output = fromCache
-              ? `${shopify.configPath} (cached, use --reset to change)`
-              : shopify.configPath;
-          })
-        ]);
+        return sequential(task, createSelectConfigTask(shopify, options));
       }, {
         rendererOptions: {
           outputBar: Infinity,
@@ -279,6 +243,94 @@ program
     spawnCommand('shopify', ['app', 'config', 'link'], {
       stdio: 'inherit'
     });
+  });
+
+program
+  .command('deploy')
+  .description('Deploy to production')
+  .option('--shopify-only', 'Only deploy Shopify config (skip build and Firebase)')
+  .option('--reset', 'Reset Shopify config selection')
+  .action(async (options) => {
+    const ctx = {
+      shopifyOnly: options.shopifyOnly,
+      shopify: {
+        configPath: '',
+        env: {}
+      }
+    };
+
+    await runTasks([
+      createTask('Select config', (task) => {
+        return sequential(task, createSelectConfigTask(ctx.shopify, options));
+      }, {
+        rendererOptions: {
+          outputBar: Infinity,
+          persistentOutput: true
+        }
+      }),
+      createTask('Deploy', (task) => {
+        return sequential(task, [
+          createTask('Load environment', async () => {
+            ctx.shopify.env = readShopifyEnv(ctx.shopify.configPath);
+          }),
+          createTask('Build production', (task) => {
+            return parallel(task, [
+              createTask('Build frontend', async () => {
+                await buildFrontend({
+                  watch: false,
+                  shopifyApiKey: ctx.shopify.env.SHOPIFY_API_KEY
+                });
+              }),
+              createTask('Build backend', (task) => {
+                return sequential(task, [
+                  createTask('Build functions', async () => {
+                    await buildBackend({ watch: false });
+                  }),
+                  createTask('Install production packages', async () => {
+                    await spawnWithCallback('npm', ['install', '--production'], {
+                      cwd: '.ryziz/functions'
+                    });
+                  })
+                ]);
+              })
+            ]);
+          }, {
+            skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
+          }),
+          createTask('Deploy to Firebase', async () => {
+            await spawnWithCallback('firebase', [
+              'deploy',
+              '--only',
+              'hosting,functions'
+            ], {
+              cwd: '.ryziz'
+            });
+          }, {
+            skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
+          }),
+          createTask('Deploy to Shopify', async () => {
+            await spawnWithCallback('shopify', [
+              'app',
+              'deploy',
+              '--config',
+              ctx.shopify.configPath,
+              '--force'
+            ]);
+          }),
+          createTask('Done', () => {
+            task.title = 'Deploy completed';
+            task.output = ctx.shopifyOnly
+              ? 'Shopify config deployed'
+              : 'Production deployed to Firebase and Shopify';
+          })
+        ]);
+      }, {
+        rendererOptions: {
+          outputBar: Infinity,
+          persistentOutput: true
+        }
+      })
+    ], { ctx });
   });
 
 program.parse();
