@@ -28,6 +28,10 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 
 ## Backlog
 
+- [ ] Don't show console or reload status outside terminal in dev command
+  - **Problem:** Dev command currently displays console logs or reload status in browser/external UI
+  - **Expected:** All status messages and logs should only appear in the terminal where `ryziz dev` was run
+  - **Goal:** Keep development feedback centralized in the terminal for cleaner debugging experience
 - [ ] Refactor deploy domain files for better code organization
   - **Issues:**
     - `deploy.shopify.js` mixes concerns: config management, cache, env reading, task creation
