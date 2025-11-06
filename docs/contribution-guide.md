@@ -10,7 +10,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 **templates/ryziz/** - User project template, source of truth for package versions
 
-**packages/cli/** - Build tools and commands (init, dev, link)
+**packages/cli/** - Build tools and commands (init, dev, link, deploy)
 
 **packages/router/** - Frontend routing and Shopify App Bridge exports
 
@@ -42,7 +42,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 ### Package Roles
 
-**cli** - Owns all commands (init, dev, link), build pipelines, and deployment logic
+**cli** - Owns all commands (init, dev, link, deploy), build pipelines, and deployment logic
 
 **router** - Provides React routing setup and Shopify App Bridge exports for frontend
 
@@ -360,7 +360,7 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **Task UI** - Use `createTask` from `util.task.js` for consistent visual output and progress tracking
 
-**Reference** - Study existing commands (init, dev, link) for structure and patterns. Each demonstrates different task organization (sequential, parallel, nested).
+**Reference** - Study existing commands (init, dev, link, deploy) for structure and patterns. Each demonstrates different task organization (sequential, parallel, nested).
 
 ## Key Files Reference
 

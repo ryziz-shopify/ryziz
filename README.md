@@ -14,7 +14,7 @@ See [templates/ryziz/README.md](templates/ryziz/README.md) for usage documentati
 
 **templates/ryziz/** - User project template, source of truth for package versions
 
-**packages/cli/** - Build tools and CLI commands (init, dev, link)
+**packages/cli/** - Build tools and CLI commands (init, dev, link, deploy)
 
 **packages/router/** - Frontend routing and Shopify App Bridge exports
 
@@ -36,11 +36,6 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Root cause:** `spawnWithCallback` doesn't capture/display stdout/stderr from child process
   - **Expected:** Show actual Shopify CLI error: `"This app is not approved to subscribe to webhook topics containing protected customer data"`
   - **Solution:** Capture and display last N lines of output when spawn fails, or buffer full output for error context
-- [ ] Create production deploy command
-  - **Feature:** `npm run deploy` command to deploy app to production
-  - **Flow:** Build frontend/backend → Deploy to Firebase (functions + hosting) → Update Shopify app config with production URLs → Deploy Shopify app version
-  - **Current state:** No deploy command exists, users must manually deploy Firebase and Shopify separately
-  - **Implementation:** Add `ryziz deploy` command that orchestrates full deployment pipeline
 
 ## Version Management
 

@@ -486,6 +486,47 @@ npm run link
 
 This connects your local project to a Shopify Partner app.
 
+## Deployment
+
+Deploy your app to production:
+
+```bash
+npm run deploy
+```
+
+This will:
+- Build frontend and backend in production mode (minified, no source maps)
+- Deploy to Firebase (Hosting + Functions)
+- Update and deploy Shopify app configuration
+
+### Deploy Options
+
+**Full deployment** (default):
+```bash
+npm run deploy
+```
+
+**Shopify config only** (skip build and Firebase):
+```bash
+npm run deploy -- --shopify-only
+```
+
+Use `--shopify-only` when you only need to update Shopify app settings (scopes, webhooks) without deploying code.
+
+**Reset config selection**:
+```bash
+npm run deploy -- --reset
+```
+
+Use `--reset` to choose a different Shopify config file if you have multiple environments.
+
+### Prerequisites
+
+Before deploying, ensure you have:
+- Firebase project configured (`.firebaserc` exists)
+- Production URLs set in `shopify.app.toml`
+- Firebase CLI installed and authenticated
+
 ## Project Configuration
 
 ### Shopify Config (shopify.app.toml)

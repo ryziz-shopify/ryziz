@@ -24,6 +24,9 @@ npm run link
 
 # Start development server
 npm run dev
+
+# Deploy to production
+npm run deploy
 ```
 
 Development server starts on localhost with Firebase emulators and Cloudflare tunnel for HTTPS.
@@ -47,6 +50,8 @@ Development server starts on localhost with Firebase emulators and Cloudflare tu
 **npm run dev** - Start development with hot reload
 
 **npm run link** - Link project to Shopify Partner app
+
+**npm run deploy** - Deploy to production (Firebase + Shopify)
 
 ## File-Based Routing
 
