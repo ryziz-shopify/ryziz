@@ -50,6 +50,11 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Root cause:** `spawnWithCallback` doesn't capture/display stdout/stderr from child process
   - **Expected:** Show actual Shopify CLI error: `"This app is not approved to subscribe to webhook topics containing protected customer data"`
   - **Solution:** Capture and display last N lines of output when spawn fails, or buffer full output for error context
+- [ ] Fix Firebase deploy error handling to show authentication errors
+  - **Problem:** When Firebase authentication is missing, deploy shows: `"firebase deploy --only hosting,functions failed with code 1"` (not helpful)
+  - **Root cause:** `util.spawn.js` throws generic error without capturing Firebase CLI stderr
+  - **Expected:** Show actual Firebase error: `"Failed to authenticate, have you run firebase login?"`
+  - **Solution:** Capture stderr from spawn and include in error message, or check Firebase auth status before deployment
 
 ## Version Management
 

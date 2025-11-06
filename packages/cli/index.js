@@ -304,7 +304,7 @@ program
               '--only',
               'hosting,functions'
             ], {
-              cwd: '.ryziz'
+              cwd: '.ryziz/functions',
             });
           }, {
             skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
