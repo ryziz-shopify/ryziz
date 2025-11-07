@@ -59,6 +59,10 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Root cause:** `util.spawn.js` throws generic error without capturing Firebase CLI stderr
   - **Expected:** Show actual Firebase error: `"Failed to authenticate, have you run firebase login?"`
   - **Solution:** Capture stderr from spawn and include in error message, or check Firebase auth status before deployment
+- [ ] Add support for firestore.indexes.json
+  - **Problem:** Framework doesn't currently manage Firestore composite indexes
+  - **Expected:** Support deploying and managing firestore.indexes.json for Firestore query optimization
+  - **Goal:** Enable developers to define and deploy composite indexes as part of their Firebase configuration
 
 ## Version Management
 
