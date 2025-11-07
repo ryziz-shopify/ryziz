@@ -137,10 +137,18 @@ function copyFirebaseConfigPlugin() {
 
         fs.mkdirSync(ryzizDir, { recursive: true });
 
+        // Load base firebase.json
         const firebaseJsonSource = path.join(__dirname, '../../functions/firebase.json');
-        const firebaseJsonTarget = path.join(ryzizDir, 'firebase.json');
-        fs.copyFileSync(firebaseJsonSource, firebaseJsonTarget);
+        const baseConfig = JSON.parse(fs.readFileSync(firebaseJsonSource, 'utf8'));
 
+        // Sync with project config files
+        const updatedConfig = syncFirebaseConfig(baseConfig, cwd, ryzizDir);
+
+        // Write updated firebase.json
+        const firebaseJsonTarget = path.join(ryzizDir, 'firebase.json');
+        fs.writeFileSync(firebaseJsonTarget, JSON.stringify(updatedConfig, null, 2));
+
+        // Copy .firebaserc
         const firebasercSource = path.join(cwd, '.firebaserc');
         const firebasercTarget = path.join(ryzizDir, '.firebaserc');
         if (fs.existsSync(firebasercSource)) {
@@ -215,4 +223,36 @@ function generateWebhooksConfig(webhooks) {
   ).join(',\n');
 
   return `${imports}\n\nexport default {\n${handlers}\n};\n`;
+}
+
+function syncFirebaseConfig(baseConfig, projectRoot, targetDir) {
+  const configFiles = [
+    { filename: 'firestore.rules', section: 'firestore', key: 'rules' },
+    { filename: 'firestore.indexes.json', section: 'firestore', key: 'indexes' },
+    { filename: 'storage.rules', section: 'storage', key: 'rules' }
+  ];
+
+  const updatedConfig = { ...baseConfig };
+
+  for (const { filename, section, key } of configFiles) {
+    const sourcePath = path.join(projectRoot, filename);
+
+    if (fs.existsSync(sourcePath)) {
+      // Ensure section exists
+      if (!updatedConfig[section]) {
+        updatedConfig[section] = {};
+      }
+
+      // Add config
+      updatedConfig[section][key] = filename;
+
+      // Copy file to target directory
+      const targetPath = path.join(targetDir, filename);
+      fs.copyFileSync(sourcePath, targetPath);
+
+      console.log(`✓ Detected ${filename}, updating firebase.json`);
+    }
+  }
+
+  return updatedConfig;
 }

@@ -10,11 +10,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 **templates/ryziz/** - User project template, source of truth for package versions
 
-**packages/cli/** - Build tools and commands (init, dev, link, deploy)
-
-**packages/router/** - Frontend routing and Shopify App Bridge exports
-
-**packages/functions/** - Firebase Cloud Functions with OAuth and webhook handling
+**packages/** - Framework packages (cli, router, functions, etc)
 
 ### Why Monorepo
 
@@ -42,11 +38,7 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 ### Package Roles
 
-**cli** - Owns all commands (init, dev, link, deploy), build pipelines, and deployment logic
-
-**router** - Provides React routing setup and Shopify App Bridge exports for frontend
-
-**functions** - Provides Firebase Cloud Functions setup with Shopify OAuth and webhook handling
+**packages/** - Framework packages with specific responsibilities (commands, routing, backend runtime, etc)
 
 **templates/ryziz** - Template for new projects and source of truth for package versions
 
@@ -187,11 +179,11 @@ Build generates new package.json with dependencies copied from functions package
 
 **Why** - Deployment environment needs dependency list. Generated file ensures deployed function has correct dependencies without manual sync.
 
-### Three Cloud Functions
+### Cloud Functions
 
 Implementation in `packages/functions/src/functions.entry.js`
 
-Framework exports three separate Cloud Functions:
+Framework exports separate Cloud Functions for different concerns:
 
 **auth** - OAuth flow handler (GET /auth, GET /auth/callback)
 
@@ -199,7 +191,7 @@ Framework exports three separate Cloud Functions:
 
 **api** - Custom endpoints from src/api.*.js files
 
-**Why separate functions** - Independent scaling. Auth rarely called (only during install), webhooks moderate traffic, API high traffic. Separate functions = separate scaling policies and cold start optimization.
+**Why separate functions** - Independent scaling. Different traffic patterns require different scaling policies and cold start optimization.
 
 ## Dev Command Flow
 
@@ -287,9 +279,11 @@ Simple wrapper that spawns `shopify app config link` with inherited stdio.
 
 ### Automatic Version Bumping
 
-Git pre-commit hook (`.husky/pre-commit`) detects changed packages and auto-increments patch version.
+Git pre-commit hook (`.husky/pre-commit`) automatically detects and bumps only packages with changes.
 
-**How it works** - Scans staged files, if package has changes (excluding package.json itself), runs `npm version patch` in that package directory.
+**How it works** - Scans staged files for each package in `packages/*`. If a package has changes (excluding package.json), runs `npm version patch` for that package only. Then syncs template dependencies for bumped packages.
+
+**Why selective bumping** - Only changed packages get new versions. Unchanged packages maintain current version. Reduces unnecessary version churn.
 
 **Why automatic** - Eliminates manual version management. Every change gets a version bump. No forgotten version updates.
 
@@ -297,11 +291,11 @@ Git pre-commit hook (`.husky/pre-commit`) detects changed packages and auto-incr
 
 ### Automatic Publishing
 
-Git pre-push hook (`.husky/pre-push`) detects version changes and auto-publishes to npm (master branch only).
+GitHub Actions workflow (`.github/workflows/publish.yml`) auto-publishes packages when pushed to master.
 
-**How it works** - Compares package.json versions between local and remote. If version field changed, runs `npm publish` for that package.
+**How it works** - On push to master, compares package.json versions between HEAD and HEAD~1. If version field changed, runs `npm publish` for that package.
 
-**Why automatic** - Publishing happens at push time, not commit time. Prevents unpublished commits on master. All commits on master = published versions.
+**Why automatic** - Publishing happens at push time. Ensures all commits on master = published versions. No unpublished changes on master branch.
 
 **Why master only** - Feature branches can have unpublished versions. Only master branch represents published state.
 
@@ -327,14 +321,13 @@ Before submitting changes:
 
 ### Package Dependencies
 
-When to add dependencies:
+**Rule** - Each package defines its own dependencies based on responsibility.
 
-- **packages/cli** - Build tools only (esbuild, glob, firebase-tools)
-- **packages/router** - Frontend runtime only (react, react-router-dom)
-- **packages/functions** - Backend runtime only (express, firebase-admin)
-- **templates/ryziz** - Template dependencies (all packages as "latest")
+**Templates package** - Lists all framework packages that users will receive.
 
 **Why strict separation** - Keep package sizes small, clear responsibilities, avoid bloat.
+
+**Where to add** - Add dependency to the package that uses it, not to parent or siblings.
 
 ### Modifying Build Pipeline
 
@@ -351,6 +344,42 @@ When to add dependencies:
 - Search for: Exported function names `auth`, `webhooks`, `api`
 
 **Tip** - Search files for function names or plugin names instead of relying on line numbers, which change frequently.
+
+### Adding New Packages
+
+To add a new package to the monorepo:
+
+**Create package directory:**
+```bash
+mkdir packages/your-package
+cd packages/your-package
+npm init -y
+```
+
+**Configure package.json:**
+```json
+{
+  "name": "@ryziz-shopify/your-package",
+  "version": "0.1.0",
+  "license": "MIT"
+}
+```
+
+**Add to template (optional):**
+
+If users need this package, add to `templates/ryziz/package.json`:
+```bash
+cd templates/ryziz
+npm pkg set dependencies.@ryziz-shopify/your-package="^0.1.0"
+```
+
+**Version management is automatic:**
+- Pre-commit hook auto-detects all packages in `packages/*`
+- Only packages with changes get version bumps
+- Template dependencies auto-sync for bumped packages
+- GitHub Actions auto-publishes changed packages to npm
+
+No configuration needed in git hooks or workflows.
 
 ### Adding New Commands
 

@@ -8,9 +8,9 @@ import webhookHandlers from './webhooks.config.js';
 
 initializeApp();
 
-export const auth = onRequest(createAuthApp());
-export const webhooks = onRequest(createWebhooksApp());
-export const api = onRequest(createApiApp());
+export const auth = onRequest({ invoker: "public" }, createAuthApp());
+export const webhooks = onRequest({ invoker: "public" }, createWebhooksApp());
+export const api = onRequest({ invoker: "public" }, createApiApp());
 
 function createAuthApp() {
   const app = express();

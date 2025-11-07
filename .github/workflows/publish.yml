@@ -18,23 +18,19 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - run: |
-          # CLI
-          if git diff HEAD~1 HEAD packages/cli/package.json | grep -q '^\+.*"version"'; then
-            cd packages/cli && npm publish --access public && cd -
-          fi
+          # Auto-detect and publish all packages
+          for package_dir in packages/*; do
+            if [ -d "$package_dir" ] && [ -f "$package_dir/package.json" ]; then
+              if git diff HEAD~1 HEAD "$package_dir/package.json" | grep -q '^\+.*"version"'; then
+                echo "Publishing $package_dir..."
+                cd "$package_dir" && npm publish --access public && cd -
+              fi
+            fi
+          done
 
-          # Functions
-          if git diff HEAD~1 HEAD packages/functions/package.json | grep -q '^\+.*"version"'; then
-            cd packages/functions && npm publish --access public && cd -
-          fi
-
-          # Router
-          if git diff HEAD~1 HEAD packages/router/package.json | grep -q '^\+.*"version"'; then
-            cd packages/router && npm publish --access public && cd -
-          fi
-
-          # Ryziz
+          # Ryziz template
           if git diff HEAD~1 HEAD templates/ryziz/package.json | grep -q '^\+.*"version"'; then
+            echo "Publishing templates/ryziz..."
             cd templates/ryziz
             mv .gitignore gitignore
             npm publish --access public

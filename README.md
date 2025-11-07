@@ -14,11 +14,7 @@ See [templates/ryziz/README.md](templates/ryziz/README.md) for usage documentati
 
 **templates/ryziz/** - User project template, source of truth for package versions
 
-**packages/cli/** - Build tools and CLI commands (init, dev, link, deploy)
-
-**packages/router/** - Frontend routing and Shopify App Bridge exports
-
-**packages/functions/** - Firebase Cloud Functions with OAuth and webhook handling
+**packages/** - Framework packages (cli, router, functions, etc)
 
 ## For Contributors
 
@@ -66,6 +62,6 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 
 ## Version Management
 
-Automatic version bumping and publishing handled by git hooks:
-- **pre-commit**: Auto-increment patch version for changed packages
-- **pre-push**: Auto-publish packages with version changes (master branch only)
+Automatic version bumping and publishing:
+- **pre-commit hook**: Auto-increment patch version for changed packages only
+- **GitHub Actions**: Auto-publish packages with version changes (master branch only)
