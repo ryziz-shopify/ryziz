@@ -59,7 +59,6 @@ const patches = {
   ]
 };
 
-// Main execution - apply patches on import
 const nodeModulesPath = findNodeModules();
 
 if (nodeModulesPath) {
@@ -81,7 +80,6 @@ if (nodeModulesPath) {
   }
 }
 
-// Helpers
 function findNodeModules() {
   let dir = __dirname;
   while (dir !== path.parse(dir).root) {

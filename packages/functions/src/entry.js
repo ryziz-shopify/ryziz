@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
-import shopify, { cookieStorage } from './functions.shopify.js';
+import shopify, { cookieStorage } from './app.js';
 import apiRoutes from './routes.config.js';
 import webhookHandlers from './webhooks.config.js';
 

@@ -6,14 +6,11 @@ import { fileURLToPath } from 'url';
 const activeProcesses = new Set();
 const cliDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// Spawn command with automatic bin path resolution for monorepo
 export function spawnCommand(command, args, options = {}) {
-
   if (['npm', 'node', 'npx'].includes(command)) {
     return spawn(command, args, options);
   }
 
-  // Try to find binary in monorepo .bin directory
   const binPath = join(cliDir, '..', '..', '.bin', command);
 
   if (!existsSync(binPath)) {

@@ -62,6 +62,183 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 **Monorepo benefit** - In development, all packages use same versions. In production, users get tested, compatible versions.
 
+## File Organization Principles
+
+### Filename Patterns
+
+**Simple descriptive names without prefixes**
+
+Examples: task.js, spawn.js, shopify.js, build.js, middleware.js, app.js, routes.jsx
+
+**Avoid prefixes or compound names**
+
+❌ util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
+
+**Package-specific patterns:**
+- CLI: task.js, build.js
+- Functions: middleware.js, app.js
+- Router: shopify.js, routes.jsx
+
+**Why** - Single responsibility per file makes purpose clear from name alone. Flat structure enables easy finding without nested navigation.
+
+### Import Style
+
+**Use named imports for Node.js built-ins:**
+
+```js
+import { join, basename } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { cp, copyFile } from 'fs/promises';
+```
+
+**Not default imports:**
+
+```js
+// ❌ Avoid
+import path from 'path';
+import fs from 'fs';
+
+// ✅ Prefer
+import { join } from 'path';
+import { readFileSync } from 'fs';
+```
+
+**Why** - More explicit, shows exactly what functions are used, enables better tree-shaking.
+
+### Utils Extraction Philosophy
+
+**Minimum utils approach** - Only extract complex logic that provides real value
+
+**Extract when:**
+- Logic spans 10+ lines with multiple steps
+- Complex parsing or transformation (TOML, glob patterns)
+- Needs monkey patching or advanced Node.js APIs (createRequire)
+- Used across multiple commands
+
+**Keep inline when:**
+- Simple library calls (fs.writeFileSync, JSON.parse)
+- One-liner operations
+- Only used once
+
+**Quote from Sandi Metz:** "Duplication is far cheaper than the wrong abstraction"
+
+**Example - Don't extract:**
+
+```js
+// ❌ Over-abstraction
+await writeJson(path, data);
+
+// ✅ Keep inline
+fs.writeFileSync(path, JSON.stringify(data, null, 2));
+```
+
+**Example - Do extract:**
+
+```js
+// ✅ Complex logic deserves extraction
+const { configs, fromCache } = await scanConfigs({ skipCache });
+```
+
+**Why** - Avoids abstraction layers that hide simple operations. Developers familiar with fs/path APIs don't need wrappers. Utils should solve real complexity, not wrap standard library.
+
+### Code Organization
+
+**Main function at top, helpers below:**
+
+```js
+export async function buildFrontend(options = {}) {
+  const watch = options.watch || false;
+  const outdir = path.join(RYZIZ_DIR, 'public');
+
+  const buildOptions = {
+    plugins: [
+      reactShimPlugin(),
+      cleanDistPlugin(outdir)
+    ]
+  };
+
+  await esbuild.build(buildOptions);
+}
+
+function reactShimPlugin() {
+  return {
+    name: 'react-shim',
+    setup(build) {
+      // implementation
+    }
+  };
+}
+
+function cleanDistPlugin(outdir) {
+  return {
+    name: 'clean-dist',
+    setup(build) {
+      // implementation
+    }
+  };
+}
+```
+
+**Why** - Hoisting style makes main function immediately visible. Helpers follow in order of usage for natural reading flow.
+
+### Variable Usage
+
+**Inline single-use values:**
+
+```js
+// ❌ Unnecessary intermediate variable
+const source = join(cwd, 'public');
+await cp(source, target);
+
+// ✅ Inline directly
+await cp(join(cwd, 'public'), target);
+```
+
+**Create variables for:**
+- Values used multiple times
+- Complex expressions that need clarity
+- Values that change during execution
+
+**Why** - Reduces visual noise, keeps code concise without sacrificing readability.
+
+### Source of Trust
+
+**Main entry point handles validation and errors:**
+
+```js
+// packages/cli/index.js
+program
+  .command('dev')
+  .action(async (options) => {
+    try {
+      // validation logic
+      if (!fs.existsSync(configPath)) {
+        throw new Error('Config not found');
+      }
+      // orchestration logic
+      await runTasks([...]);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(1);
+    }
+  });
+```
+
+**Utility functions stay pure:**
+
+```js
+// packages/cli/src/shopify.js
+export async function updateConfig(tunnelUrl, configPath) {
+  // Just do the work, return data
+  const tomlContent = fs.readFileSync(configPath, 'utf8');
+  const tomlData = parse(tomlContent);
+  // ...
+  return tomlData;
+}
+```
+
+**Why** - Single source of truth for error handling. Utils remain reusable across different contexts. Index.js orchestrates, utils execute.
+
 ## Init Command Flow
 
 When user runs `npx @ryziz-shopify/ryziz@latest init`:

@@ -25,7 +25,10 @@
 6. Apply same changes to similar files (ask first)
 
 ## Naming
-- Files: domain.action.js (frontend.build.js, api.handler.js)
+- Files: Simple descriptive names without prefixes
+  - Examples: task.js, spawn.js, shopify.js, build.js, middleware.js, app.js, routes.jsx
+  - ❌ Avoid: util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
+  - Pattern: CLI (task.js, build.js), Functions (middleware.js, app.js), Router (shopify.js, routes.jsx)
 - Single responsibility per file
 - Flat structure for easy finding
 - Variables: camelCase

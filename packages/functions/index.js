@@ -1,6 +1,6 @@
 import { getFirestore } from 'firebase-admin/firestore';
 
-export { withShopify } from './src/util.shopify.js';
+export { withShopify } from './src/middleware.js';
 
 // Lazy init: Firebase must be initialized before accessing Firestore
 let _db;

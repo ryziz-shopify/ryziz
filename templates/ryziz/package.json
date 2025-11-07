@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/ryziz",
-  "version": "0.1.60",
+  "version": "0.1.61",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -9,9 +9,9 @@
   },
   "bin": "node_modules/@ryziz-shopify/cli/index.js",
   "dependencies": {
-    "@ryziz-shopify/cli": "^0.1.59",
-    "@ryziz-shopify/functions": "^0.1.7",
-    "@ryziz-shopify/router": "^0.1.7",
+    "@ryziz-shopify/cli": "^0.1.60",
+    "@ryziz-shopify/functions": "^0.1.8",
+    "@ryziz-shopify/router": "^0.1.8",
     "react": "^19.2.0"
   },
   "scripts": {

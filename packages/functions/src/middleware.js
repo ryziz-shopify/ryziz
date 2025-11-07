@@ -1,4 +1,4 @@
-import shopify from './functions.shopify.js';
+import shopify from './app.js';
 
 export function withShopify(handler) {
   return async (req, res) => {

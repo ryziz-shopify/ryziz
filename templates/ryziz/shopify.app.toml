@@ -1,14 +1,14 @@
 client_id = "5b375d315a553f0ed46bf437a709e1b9"
 name = "tien-dev-test-2"
-application_url = "https://alt-recorded-michelle-slideshow.trycloudflare.com/app"
+application_url = "https://lunch-cart-fabric-aged.trycloudflare.com/app"
 embedded = true
 
 [webhooks]
 api_version = "2026-01"
-subscriptions = [ { compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ], uri = "https://alt-recorded-michelle-slideshow.trycloudflare.com/webhook" }, { topics = [ "app/uninstalled" ], uri = "https://alt-recorded-michelle-slideshow.trycloudflare.com/webhook" } ]
+subscriptions = [ { compliance_topics = [ "shop/redact", "customers/redact", "customers/data_request" ], uri = "https://lunch-cart-fabric-aged.trycloudflare.com/webhook" }, { topics = [ "app/uninstalled" ], uri = "https://lunch-cart-fabric-aged.trycloudflare.com/webhook" } ]
 
 [access_scopes]
 scopes = "read_products"
 
 [auth]
-redirect_urls = [ "https://alt-recorded-michelle-slideshow.trycloudflare.com/auth/callback" ]
+redirect_urls = [ "https://lunch-cart-fabric-aged.trycloudflare.com/auth/callback" ]

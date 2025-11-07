@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 
-import './src/util.apply-patches.js';
+import './src/patches.js';
 
 import { Command } from 'commander';
-import buildFrontend from './src/build.frontend.js';
-import buildBackend from './src/build.backend.js';
-import deployShopify, { readShopifyEnv, createSelectConfigTask, getProductionHostname } from './src/deploy.shopify.js';
-import { createPullTasks } from './src/deploy.firestore.js';
-import { runTasks, createTask, sequential, parallel } from './src/util.task.js';
-import { spawnWithCallback, spawnCommand } from './src/util.spawn.js';
-import path from 'path';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
+import { runTasks, createTask, sequential, parallel } from './src/task.js';
+import { spawnWithCallback, spawnCommand } from './src/spawn.js';
+import { locatePackage, scanConfigs, readEnv, readCache, writeCache } from './src/system.js';
+import { updateConfig } from './src/shopify.js';
+import { buildFrontend, buildBackend } from './src/build.js';
+import { pullFirestore } from './src/firebase.js';
+import { select, input } from '@inquirer/prompts';
+import { ListrInquirerPromptAdapter } from '@listr2/prompt-adapter-inquirer';
+import { join, basename } from 'path';
+import { readdirSync, existsSync, writeFileSync } from 'fs';
+import { stat, cp, copyFile, rename } from 'fs/promises';
 
 const program = new Command();
 
@@ -33,51 +35,53 @@ program
           createTask('Setup project', (task) => {
             return sequential(task, [
               createTask('Locate template', async () => {
-                const module = await import('module');
-                const packageJsonPath = module.createRequire(import.meta.url).resolve('@ryziz-shopify/ryziz/package.json');
-                ryzizPackagePath = path.dirname(packageJsonPath);
+                ryzizPackagePath = await locatePackage('@ryziz-shopify/ryziz');
               }),
+
               createTask('Copy files to project', (task) => {
-                return parallel(task, fs.readdirSync(ryzizPackagePath)
+                return parallel(task, readdirSync(ryzizPackagePath)
                   .filter(file => file !== 'node_modules')
                   .map(file =>
                     createTask(file, async () => {
-                      const source = path.join(ryzizPackagePath, file);
-                      const dest = path.join(targetDir, file);
-
-                      const stats = await fsPromises.stat(source);
-                      if (stats.isDirectory()) {
-                        await fsPromises.cp(source, dest, { recursive: true });
+                      if ((await stat(join(ryzizPackagePath, file))).isDirectory()) {
+                        await cp(join(ryzizPackagePath, file), join(targetDir, file), { recursive: true });
                       } else {
-                        await fsPromises.copyFile(source, dest);
+                        await copyFile(join(ryzizPackagePath, file), join(targetDir, file));
                       }
                     })
                   ));
               }),
+
               createTask('Restore dotfiles', async () => {
-                if (fs.existsSync(path.join(targetDir, 'gitignore'))) {
-                  await fsPromises.rename(
-                    path.join(targetDir, 'gitignore'),
-                    path.join(targetDir, '.gitignore')
+                if (existsSync(join(targetDir, 'gitignore'))) {
+                  await rename(
+                    join(targetDir, 'gitignore'),
+                    join(targetDir, '.gitignore')
                   );
                 }
               }),
+
               createTask('Configure project', (task) => {
                 return sequential(task, [
                   createTask('Clean package config', async () => {
                     await spawnWithCallback('npm', ['pkg', 'delete', 'bin']);
                   }),
                   createTask('Set package name', async () => {
-                    await spawnWithCallback('npm', ['pkg', 'set', `name=${path.basename(process.cwd())}`]);
+                    await spawnWithCallback('npm', ['pkg', 'set', `name=${basename(process.cwd())}`]);
+                  }),
+                  createTask('Move CLI dependency', async () => {
+                    await spawnWithCallback('npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')']);
+                    await spawnWithCallback('npm', ['pkg', 'delete', 'dependencies.@ryziz-shopify/cli']);
                   })
                 ]);
               })
             ]);
           }),
+
           createTask('Install dependencies', async () => {
             await spawnWithCallback('npm', ['install']);
-            await spawnWithCallback('npm', ['install', '@ryziz-shopify/cli', '--save-dev']);
           }),
+
           createTask('Done', () => {
             task.title = 'Init completed';
             task.output = 'Next: npm run link, then npm run dev';
@@ -105,18 +109,55 @@ program
 
     await runTasks([
       createTask('Select config', (task) => {
-        return sequential(task, createSelectConfigTask(shopify, options));
+        return sequential(task, [
+          createTask('Scan configs', async () => {
+            const result = await scanConfigs({ skipCache: options.reset });
+
+            if (result.configs.length === 0) {
+              throw new Error('No Shopify config found. Try running: npm run link');
+            }
+
+            if (result.configs.length === 1 || result.fromCache) {
+              shopify.configPath = result.configs[0].value;
+            }
+          }),
+
+          createTask('Choose config', async (task) => {
+            if (!shopify.configPath) {
+              const result = await scanConfigs({ skipCache: true });
+              shopify.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
+                message: 'Select Shopify config',
+                choices: result.configs.map(c => ({
+                  name: `${c.label} (${c.name})`,
+                  value: c.value
+                }))
+              });
+              writeCache({ shopifyConfig: shopify.configPath });
+            }
+          }),
+
+          createTask('Done', () => {
+            const cache = readCache();
+            const fromCache = cache.shopifyConfig === shopify.configPath;
+            task.title = 'Config selected';
+            task.output = fromCache
+              ? `${shopify.configPath} (cached, use --reset to change)`
+              : shopify.configPath;
+          })
+        ]);
       }, {
         rendererOptions: {
           outputBar: Infinity,
           persistentOutput: true
         }
       }),
+
       createTask('Dev', (task) => {
         return sequential(task, [
           createTask('Load environment', async () => {
-            shopify.env = readShopifyEnv(shopify.configPath);
+            shopify.env = readEnv(shopify.configPath);
           }),
+
           createTask('Build', (task) => {
             return parallel(task, [
               createTask('Setup environment', (task) => {
@@ -140,6 +181,7 @@ program
                           }
                         });
                       }),
+
                       createTask('Create tunnel', async () => {
                         await spawnWithCallback('cloudflared', [
                           'tunnel',
@@ -163,11 +205,12 @@ program
                       })
                     ]);
                   }),
+
                   createTask('Write .env', async () => {
                     shopify.env.SHOPIFY_HOST_NAME = shopify.tunnel.replace(/^https?:\/\//, '');
 
-                    fs.writeFileSync(
-                      path.join(process.cwd(), '.ryziz/functions/.env'),
+                    writeFileSync(
+                      join(process.cwd(), '.ryziz/functions/.env'),
                       Object.entries(shopify.env)
                         .map(([key, value]) => `${key}=${value}`)
                         .join('\n')
@@ -175,14 +218,17 @@ program
                   })
                 ]);
               }),
+
               createTask('Build web', async () => {
-                await buildFrontend({ watch: true, shopifyApiKey: shopify.env.SHOPIFY_API_KEY });
+                await buildFrontend({ watch: true, apiKey: shopify.env.SHOPIFY_API_KEY });
               }),
+
               createTask('Setup functions', (task) => {
                 return sequential(task, [
                   createTask('Build functions', async () => {
                     await buildBackend({ watch: true });
                   }),
+
                   createTask('Install packages', async () => {
                     await spawnWithCallback('npm', ['install'], {
                       cwd: '.ryziz/functions'
@@ -192,6 +238,7 @@ program
               })
             ]);
           }),
+
           createTask('Start', (task) => {
             return parallel(task, [
               createTask('Start emulators', async () => {
@@ -211,8 +258,9 @@ program
                   }
                 });
               }),
+
               createTask('Register app', async () => {
-                await deployShopify(shopify.tunnel, shopify.configPath);
+                await updateConfig(shopify.tunnel, shopify.configPath);
                 await spawnWithCallback('shopify', [
                   'app',
                   'deploy',
@@ -223,6 +271,7 @@ program
               })
             ]);
           }),
+
           createTask('Done', () => {
             task.title = 'Dev started';
             task.output = shopify.tunnel;
@@ -252,29 +301,58 @@ program
   .option('--shopify-only', 'Only deploy Shopify config (skip build and Firebase)')
   .option('--reset', 'Reset Shopify config selection')
   .action(async (options) => {
-    const ctx = {
-      shopifyOnly: options.shopifyOnly,
-      shopify: {
-        configPath: '',
-        env: {},
-        productionUrl: ''
-      }
+    const shopifyOnly = options.shopifyOnly;
+    const shopify = {
+      configPath: '',
+      env: {}
     };
 
     await runTasks([
       createTask('Select config', (task) => {
-        return sequential(task, createSelectConfigTask(ctx.shopify, options));
+        return sequential(task, [
+          createTask('Scan configs', async () => {
+            const result = await scanConfigs({ skipCache: true });
+
+            if (result.configs.length === 0) {
+              throw new Error('No Shopify config found. Try running: npm run link');
+            }
+
+            if (result.configs.length === 1) {
+              shopify.configPath = result.configs[0].value;
+            }
+          }),
+
+          createTask('Choose config', async (task) => {
+            if (!shopify.configPath) {
+              const result = await scanConfigs({ skipCache: true });
+              shopify.configPath = await task.prompt(ListrInquirerPromptAdapter).run(select, {
+                message: 'Select Shopify config',
+                choices: result.configs.map(c => ({
+                  name: `${c.label} (${c.name})`,
+                  value: c.value
+                }))
+              });
+            }
+          }),
+
+          createTask('Done', () => {
+            task.title = 'Config selected';
+            task.output = shopify.configPath;
+          })
+        ]);
       }, {
         rendererOptions: {
           outputBar: Infinity,
           persistentOutput: true
         }
       }),
+
       createTask('Deploy', (task) => {
         return sequential(task, [
           createTask('Load environment', async () => {
-            ctx.shopify.env = readShopifyEnv(ctx.shopify.configPath);
+            shopify.env = readEnv(shopify.configPath);
           }),
+
           createTask('Setup environment', (task) => {
             return sequential(task, [
               createTask('Fetch API secret', async () => {
@@ -283,50 +361,46 @@ program
                   'env',
                   'show',
                   '--config',
-                  ctx.shopify.configPath
+                  shopify.configPath
                 ], {
                   onLine(line, { resolve }) {
                     const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
                     if (match) {
-                      ctx.shopify.env.SHOPIFY_API_SECRET = match[1].trim();
+                      shopify.env.SHOPIFY_API_SECRET = match[1].trim();
                       resolve();
                     }
                   }
                 });
               }),
-              createTask('Get production hostname', async () => {
-                ctx.shopify.productionUrl = getProductionHostname();
-              }),
-              createTask('Write .env', async () => {
-                ctx.shopify.env.SHOPIFY_HOST_NAME = ctx.shopify.productionUrl.replace(/^https?:\/\//, '');
 
-                fs.writeFileSync(
-                  path.join(process.cwd(), '.ryziz/functions/.env'),
-                  Object.entries(ctx.shopify.env)
+              createTask('Write .env', async () => {
+                writeFileSync(
+                  join(process.cwd(), '.ryziz/functions/.env'),
+                  Object.entries(shopify.env)
                     .map(([key, value]) => `${key}=${value}`)
                     .join('\n')
                 );
-              }),
-              createTask('Update Shopify config', async () => {
-                await deployShopify(ctx.shopify.productionUrl, ctx.shopify.configPath);
               })
             ]);
           }, {
             skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
           }),
+
           createTask('Build production', (task) => {
             return parallel(task, [
               createTask('Build frontend', async () => {
                 await buildFrontend({
                   watch: false,
-                  shopifyApiKey: ctx.shopify.env.SHOPIFY_API_KEY
+                  apiKey: shopify.env.SHOPIFY_API_KEY
                 });
               }),
+
               createTask('Build backend', (task) => {
                 return sequential(task, [
                   createTask('Build functions', async () => {
                     await buildBackend({ watch: false });
                   }),
+
                   createTask('Install production packages', async () => {
                     await spawnWithCallback('npm', ['install', '--production'], {
                       cwd: '.ryziz/functions'
@@ -338,6 +412,7 @@ program
           }, {
             skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
           }),
+
           createTask('Deploy to Firebase', async () => {
             await spawnWithCallback('firebase', [
               'deploy',
@@ -349,18 +424,20 @@ program
           }, {
             skip: (ctx) => ctx.shopifyOnly ? 'Skipped (--shopify-only)' : false
           }),
+
           createTask('Deploy to Shopify', async () => {
             await spawnWithCallback('shopify', [
               'app',
               'deploy',
               '--config',
-              ctx.shopify.configPath,
+              shopify.configPath,
               '--force'
             ]);
           }),
+
           createTask('Done', () => {
             task.title = 'Deploy completed';
-            task.output = ctx.shopifyOnly
+            task.output = shopifyOnly
               ? 'Shopify config deployed'
               : 'Production deployed to Firebase and Shopify';
           })
@@ -371,16 +448,46 @@ program
           persistentOutput: true
         }
       })
-    ], { ctx });
+    ]);
   });
 
 program
   .command('pull')
   .description('Pull production Firestore data to local')
   .action(async () => {
+    let serviceAccountPath = '';
+    let collections = [];
+
     await runTasks([
       createTask('Pull', (task) => {
-        return createPullTasks(task);
+        return sequential(task, [
+          createTask('Enter service account path', async (task) => {
+            serviceAccountPath = await task.prompt(ListrInquirerPromptAdapter).run(input, {
+              message: 'Paste absolute path to service account JSON file'
+            });
+
+            if (!existsSync(serviceAccountPath)) {
+              throw new Error(`Service account file not found: ${serviceAccountPath}`);
+            }
+          }),
+
+          createTask('Connect to production', async () => {
+            collections = await pullFirestore(serviceAccountPath);
+          }),
+
+          createTask('Export collections', (task) => {
+            return parallel(task, collections.map(c =>
+              createTask(c.id, async () => {
+                await c.export();
+              })
+            ));
+          }),
+
+          createTask('Done', () => {
+            task.title = 'Pull completed';
+            task.output = 'Production data synced to .ryziz/emulator-data';
+          })
+        ]);
       }, {
         rendererOptions: {
           outputBar: Infinity,

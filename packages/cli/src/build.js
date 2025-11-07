@@ -4,12 +4,49 @@ import { glob } from 'glob';
 import * as esbuild from 'esbuild';
 import { fileURLToPath } from 'url';
 
-const RYZIZ_DIR = '.ryziz';
-const OUTDIR = path.join(RYZIZ_DIR, 'functions');
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const RYZIZ_DIR = '.ryziz';
 
-export default async function build(options = {}) {
+export async function buildFrontend(options = {}) {
   const watch = options.watch || false;
+  const apiKey = options.apiKey || '';
+  const outdir = path.join(RYZIZ_DIR, 'public');
+
+  const buildOptions = {
+    entryPoints: {
+      index: '@ryziz-shopify/router/src/routes.jsx'
+    },
+    bundle: true,
+    outdir,
+    splitting: true,
+    format: 'esm',
+    jsx: 'automatic',
+    inject: ['react-shim'],
+    minify: !watch,
+    sourcemap: watch,
+    alias: {
+      '~': process.cwd()
+    },
+    plugins: [
+      reactShimPlugin(),
+      cleanDistPlugin(outdir),
+      virtualRoutesPlugin(),
+      copyPublicPlugin(outdir),
+      injectApiKeyPlugin(outdir, apiKey)
+    ]
+  };
+
+  if (watch) {
+    const ctx = await esbuild.context(buildOptions);
+    await ctx.watch();
+  } else {
+    await esbuild.build(buildOptions);
+  }
+}
+
+export async function buildBackend(options = {}) {
+  const watch = options.watch || false;
+  const outdir = path.join(RYZIZ_DIR, 'functions');
 
   const functionsPackagePath = path.join(__dirname, '../../functions/package.json');
   const functionsPackage = JSON.parse(fs.readFileSync(functionsPackagePath, 'utf8'));
@@ -19,7 +56,7 @@ export default async function build(options = {}) {
       index: '@ryziz-shopify/functions/src/functions.entry.js'
     },
     bundle: true,
-    outdir: OUTDIR,
+    outdir,
     format: 'cjs',
     external: Object.keys(functionsPackage.dependencies || {}),
     platform: 'node',
@@ -30,10 +67,10 @@ export default async function build(options = {}) {
       '~': process.cwd()
     },
     plugins: [
-      cleanDistPlugin(),
+      cleanDistPlugin(outdir),
       virtualRoutesPlugin(),
       virtualWebhooksPlugin(),
-      generatePackageJsonPlugin(functionsPackage),
+      generatePackageJsonPlugin(outdir, functionsPackage),
       copyFirebaseConfigPlugin()
     ]
   };
@@ -47,16 +84,40 @@ export default async function build(options = {}) {
   }
 }
 
-function cleanDistPlugin() {
+function reactShimPlugin() {
+  return {
+    name: 'react-shim',
+    setup(build) {
+      build.onResolve({ filter: /^react-shim$/ }, () => {
+        return {
+          path: 'react-shim',
+          namespace: 'react-shim'
+        };
+      });
+
+      build.onLoad({ filter: /.*/, namespace: 'react-shim' }, () => {
+        return {
+          contents: `
+            import * as React from 'react';
+            export { React };
+          `,
+          loader: 'js',
+          resolveDir: process.cwd()
+        };
+      });
+    }
+  };
+}
+
+function cleanDistPlugin(outdir) {
   return {
     name: 'clean-dist',
     setup(build) {
       build.onStart(() => {
-        const indexJs = path.join(process.cwd(), OUTDIR, 'index.js');
-        const indexJsMap = path.join(process.cwd(), OUTDIR, 'index.js.map');
-
-        if (fs.existsSync(indexJs)) fs.rmSync(indexJs);
-        if (fs.existsSync(indexJsMap)) fs.rmSync(indexJsMap);
+        const fullPath = path.join(process.cwd(), outdir);
+        if (fs.existsSync(fullPath)) {
+          fs.rmSync(fullPath, { recursive: true, force: true });
+        }
       });
     }
   };
@@ -74,12 +135,45 @@ function virtualRoutesPlugin() {
       });
 
       build.onLoad({ filter: /.*/, namespace: 'virtual-routes' }, async () => {
-        const routes = await scanApiFiles();
+        const routes = await scanPageFiles();
         return {
           contents: generateRoutesConfig(routes),
           loader: 'js',
           resolveDir: process.cwd()
         };
+      });
+    }
+  };
+}
+
+function copyPublicPlugin(outdir) {
+  return {
+    name: 'copy-public',
+    setup(build) {
+      build.onEnd(() => {
+        const publicDir = path.join(process.cwd(), 'public');
+        const targetDir = path.join(process.cwd(), outdir);
+
+        if (fs.existsSync(publicDir)) {
+          fs.cpSync(publicDir, targetDir, { recursive: true });
+        }
+      });
+    }
+  };
+}
+
+function injectApiKeyPlugin(outdir, apiKey) {
+  return {
+    name: 'inject-api-key',
+    setup(build) {
+      build.onEnd(() => {
+        const appIndexPath = path.join(process.cwd(), outdir, 'app/index.html');
+
+        if (fs.existsSync(appIndexPath)) {
+          let content = fs.readFileSync(appIndexPath, 'utf8');
+          content = content.replace('%SHOPIFY_API_KEY%', apiKey);
+          fs.writeFileSync(appIndexPath, content);
+        }
       });
     }
   };
@@ -108,7 +202,7 @@ function virtualWebhooksPlugin() {
   };
 }
 
-function generatePackageJsonPlugin(functionsPackage) {
+function generatePackageJsonPlugin(outdir, functionsPackage) {
   return {
     name: 'generate-package-json',
     setup(build) {
@@ -120,7 +214,7 @@ function generatePackageJsonPlugin(functionsPackage) {
           dependencies: functionsPackage.dependencies
         };
 
-        const outputPath = path.join(process.cwd(), OUTDIR, 'package.json');
+        const outputPath = path.join(process.cwd(), outdir, 'package.json');
         fs.writeFileSync(outputPath, JSON.stringify(targetPackage, null, 2));
       });
     }
@@ -137,18 +231,14 @@ function copyFirebaseConfigPlugin() {
 
         fs.mkdirSync(ryzizDir, { recursive: true });
 
-        // Load base firebase.json
         const firebaseJsonSource = path.join(__dirname, '../../functions/firebase.json');
         const baseConfig = JSON.parse(fs.readFileSync(firebaseJsonSource, 'utf8'));
 
-        // Sync with project config files
         const updatedConfig = syncFirebaseConfig(baseConfig, cwd, ryzizDir);
 
-        // Write updated firebase.json
         const firebaseJsonTarget = path.join(ryzizDir, 'firebase.json');
         fs.writeFileSync(firebaseJsonTarget, JSON.stringify(updatedConfig, null, 2));
 
-        // Copy .firebaserc
         const firebasercSource = path.join(cwd, '.firebaserc');
         const firebasercTarget = path.join(ryzizDir, '.firebaserc');
         if (fs.existsSync(firebasercSource)) {
@@ -159,9 +249,11 @@ function copyFirebaseConfigPlugin() {
   };
 }
 
-async function scanApiFiles() {
-  const pattern = path.join(process.cwd(), 'src/api.*.js');
-  const files = await glob(pattern);
+async function scanPageFiles() {
+  const files = await glob([
+    path.join(process.cwd(), 'src/page.*.jsx'),
+    path.join(process.cwd(), 'src/app.*.jsx')
+  ]);
 
   return files.map(file => {
     const filename = path.basename(file);
@@ -173,27 +265,36 @@ async function scanApiFiles() {
 }
 
 function filenameToRoute(filename) {
-  const name = filename.replace('api.', '').replace('.js', '');
-  if (name === 'index') return '/api/';
+  if (filename.startsWith('app.')) {
+    const name = filename.replace('app.', '').replace('.jsx', '');
+    if (name === 'index') return '/app/';
 
-  return '/api/' + name.split('.').map(segment =>
+    return '/app/' + name.split('.').map(segment =>
+      segment.startsWith('$') ? ':' + segment.slice(1) : segment
+    ).join('/');
+  }
+
+  const name = filename.replace('page.', '').replace('.jsx', '');
+  if (name === 'index') return '/';
+
+  return '/' + name.split('.').map(segment =>
     segment.startsWith('$') ? ':' + segment.slice(1) : segment
   ).join('/');
 }
 
 function generateRoutesConfig(routes) {
   const imports = routes.map((r, i) =>
-    `import * as api${i} from '${r.file}';`
+    `import Page${i} from '${r.file}';`
   ).join('\n');
 
   const array = routes.map((r, i) =>
-    `  { path: '${r.path}', module: api${i} }`
+    `  { path: '${r.path}', component: Page${i} }`
   ).join(',\n');
 
   return `${imports}\n\nexport default [\n${array}\n];\n`;
 }
 
-export async function scanWebhookFiles() {
+async function scanWebhookFiles() {
   const pattern = path.join(process.cwd(), 'src/webhooks.*.js');
   const files = await glob(pattern);
 
@@ -238,15 +339,12 @@ function syncFirebaseConfig(baseConfig, projectRoot, targetDir) {
     const sourcePath = path.join(projectRoot, filename);
 
     if (fs.existsSync(sourcePath)) {
-      // Ensure section exists
       if (!updatedConfig[section]) {
         updatedConfig[section] = {};
       }
 
-      // Add config
       updatedConfig[section][key] = filename;
 
-      // Copy file to target directory
       const targetPath = path.join(targetDir, filename);
       fs.copyFileSync(sourcePath, targetPath);
 

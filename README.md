@@ -28,22 +28,9 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Problem:** Dev command currently displays console logs or reload status in browser/external UI
   - **Expected:** All status messages and logs should only appear in the terminal where `ryziz dev` was run
   - **Goal:** Keep development feedback centralized in the terminal for cleaner debugging experience
-- [ ] Refactor deploy domain files for better code organization
-  - **Issues:**
-    - `deploy.shopify.js` mixes concerns: config management, cache, env reading, task creation
-    - `deploy.firestore.js` has Firebase app initialization that could fail on re-init
-    - Cache logic (`readCache/writeCache`) could be extracted to `util.cache.js`
-    - Service account prompt pattern could be reusable
-    - No progress feedback for large Firestore collections (100k+ docs)
-  - **Potential improvements:**
-    - Extract cache utilities to separate file (single responsibility)
-    - Standardize config selection pattern (Shopify config vs service account path)
-    - Add progress reporting for long-running operations
-    - Better error handling for Firebase app initialization
-    - Consider creating `util.prompt.js` for reusable prompt patterns
-  - **Goal:** Clearer separation of concerns, less duplication, more maintainable
+- [x] ~~Refactor deploy domain files for better code organization~~ (Completed 2025-11-07)
 - [ ] Create template for Shopify private apps
-- [ ] Implement Polaris Web Components in app template
+- [x] ~~Implement Polaris Web Components in app template~~ (Completed 2025-11-07)
 - [ ] Fix Firebase emulator not stopping when dev command is interrupted
 - [ ] Improve error messages when Shopify CLI commands fail
   - **Problem:** When using protected customer data webhooks without approval, error shows: `"shopify app deploy failed with code 1"` (not helpful)
@@ -55,10 +42,8 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
   - **Root cause:** `util.spawn.js` throws generic error without capturing Firebase CLI stderr
   - **Expected:** Show actual Firebase error: `"Failed to authenticate, have you run firebase login?"`
   - **Solution:** Capture stderr from spawn and include in error message, or check Firebase auth status before deployment
-- [ ] Add support for firestore.indexes.json
-  - **Problem:** Framework doesn't currently manage Firestore composite indexes
-  - **Expected:** Support deploying and managing firestore.indexes.json for Firestore query optimization
-  - **Goal:** Enable developers to define and deploy composite indexes as part of their Firebase configuration
+- [x] ~~Add support for firestore.indexes.json~~ (Completed 2025-11-07)
+- [x] ~~Production deploy must always prompt for environment selection~~ (Completed 2025-11-07)
 
 ## Version Management
 
