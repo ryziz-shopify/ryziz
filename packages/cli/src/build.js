@@ -53,7 +53,7 @@ export async function buildBackend(options = {}) {
 
   const buildOptions = {
     entryPoints: {
-      index: '@ryziz-shopify/functions/src/functions.entry.js'
+      index: '@ryziz-shopify/functions/src/entry.js'
     },
     bundle: true,
     outdir,

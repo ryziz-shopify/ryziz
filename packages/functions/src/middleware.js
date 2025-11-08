@@ -21,15 +21,13 @@ export function withShopify(handler) {
       session,
       client,
       graphql: async (query, variables) => {
-        const { body } = await client.query({
-          data: { query, variables }
-        });
+        const response = await client.request(query, { variables });
 
-        if (body.errors) {
-          throw new Error(body.errors.map(e => e.message).join(', '));
+        if (response.errors) {
+          throw new Error(response.errors.map(e => e.message).join(', '));
         }
 
-        return body.data;
+        return response.data;
       }
     };
 

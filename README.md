@@ -24,6 +24,7 @@ Read [docs/coding-standards.md](docs/coding-standards.md) for code patterns and 
 
 ## Backlog
 
+- [ ] Auto-rebuild public folder when files change in dev mode
 - [ ] Don't show console or reload status outside terminal in dev command
   - **Problem:** Dev command currently displays console logs or reload status in browser/external UI
   - **Expected:** All status messages and logs should only appear in the terminal where `ryziz dev` was run

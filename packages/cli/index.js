@@ -6,7 +6,7 @@ import { Command } from 'commander';
 import { runTasks, createTask, sequential, parallel } from './src/task.js';
 import { spawnWithCallback, spawnCommand } from './src/spawn.js';
 import { locatePackage, scanConfigs, readEnv, readCache, writeCache } from './src/system.js';
-import { updateConfig } from './src/shopify.js';
+import { updateConfig, ensureAccessConfig } from './src/shopify.js';
 import { buildFrontend, buildBackend } from './src/build.js';
 import { pullFirestore } from './src/firebase.js';
 import { select, input } from '@inquirer/prompts';
@@ -134,6 +134,10 @@ program
               });
               writeCache({ shopifyConfig: shopify.configPath });
             }
+          }),
+
+          createTask('Validate config', async () => {
+            ensureAccessConfig(shopify.configPath);
           }),
 
           createTask('Done', () => {
@@ -333,6 +337,10 @@ program
                 }))
               });
             }
+          }),
+
+          createTask('Validate config', async () => {
+            ensureAccessConfig(shopify.configPath);
           }),
 
           createTask('Done', () => {

@@ -292,7 +292,7 @@ Removes `bin` field from user's package.json after init completes.
 
 ## Frontend Build Pipeline
 
-Implementation in `packages/cli/src/build.frontend.js`
+Implementation in `packages/cli/src/build.js` (`buildFrontend` function)
 
 ### Build Strategy
 
@@ -322,7 +322,7 @@ Shopify API key injected into HTML template during build.
 
 ## Backend Build Pipeline
 
-Implementation in `packages/cli/src/build.backend.js`
+Implementation in `packages/cli/src/build.js` (`buildBackend` function)
 
 ### Build Strategy
 
@@ -358,7 +358,7 @@ Build generates new package.json with dependencies copied from functions package
 
 ### Cloud Functions
 
-Implementation in `packages/functions/src/functions.entry.js`
+Implementation in `packages/functions/src/entry.js`
 
 Framework exports separate Cloud Functions for different concerns:
 
@@ -508,15 +508,15 @@ Before submitting changes:
 
 ### Modifying Build Pipeline
 
-**Frontend build** (`packages/cli/src/build.frontend.js`):
+**Frontend build** (`packages/cli/src/build.js`):
 - Modify when: Adding new page types, changing bundle format, altering route discovery
-- Search for: Function names like `createVirtualRoutesPlugin` or `buildFrontend`
+- Search for: Function names like `virtualRoutesPlugin` or `buildFrontend`
 
-**Backend build** (`packages/cli/src/build.backend.js`):
+**Backend build** (`packages/cli/src/build.js`):
 - Modify when: Adding new API route types, changing function exports, webhook handling
-- Search for: Function names like `createVirtualRoutesPlugin` or `buildBackend`
+- Search for: Function names like `virtualWebhooksPlugin` or `buildBackend`
 
-**Cloud Functions entry** (`packages/functions/src/functions.entry.js`):
+**Cloud Functions entry** (`packages/functions/src/entry.js`):
 - Modify when: Adding new Cloud Function, changing middleware, modifying auth/webhook handlers
 - Search for: Exported function names `auth`, `webhooks`, `api`
 
@@ -564,7 +564,7 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **Structure** - Use Commander.js `.command()` API with `.action()` handler
 
-**Task UI** - Use `createTask` from `util.task.js` for consistent visual output and progress tracking
+**Task UI** - Use `createTask` from `task.js` for consistent visual output and progress tracking
 
 **Reference** - Study existing commands (init, dev, link, deploy) for structure and patterns. Each demonstrates different task organization (sequential, parallel, nested).
 
@@ -572,15 +572,15 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **CLI commands** - `packages/cli/index.js`
 
-**Frontend build** - `packages/cli/src/build.frontend.js`
+**Frontend build** - `packages/cli/src/build.js` (buildFrontend function)
 
-**Backend build** - `packages/cli/src/build.backend.js`
+**Backend build** - `packages/cli/src/build.js` (buildBackend function)
 
-**Cloud Functions** - `packages/functions/src/functions.entry.js`
+**Cloud Functions** - `packages/functions/src/entry.js`
 
-**Shopify config** - `packages/functions/src/functions.shopify.js`
+**Shopify config** - `packages/functions/src/app.js`
 
-**Task utilities** - `packages/cli/src/util.task.js`
+**Task utilities** - `packages/cli/src/task.js`
 
 **Template config** - `templates/ryziz/shopify.app.toml`
 

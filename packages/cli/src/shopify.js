@@ -5,6 +5,19 @@ import { parse, stringify } from 'toml-patch';
 
 const COMPLIANCE_TOPICS = ['customers/data_request', 'customers/redact', 'shop/redact'];
 
+export function ensureAccessConfig(configPath) {
+  const tomlPath = path.join(process.cwd(), configPath);
+  const tomlContent = fs.readFileSync(tomlPath, 'utf8');
+  const tomlData = parse(tomlContent);
+
+  tomlData.access = {
+    admin: { embedded_app_direct_api_access: true }
+  };
+
+  const updatedContent = stringify(tomlData);
+  fs.writeFileSync(tomlPath, updatedContent);
+}
+
 export async function updateConfig(tunnelUrl, configPath) {
   const tomlPath = path.join(process.cwd(), configPath);
   const tomlContent = fs.readFileSync(tomlPath, 'utf8');

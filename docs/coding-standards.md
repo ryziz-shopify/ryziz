@@ -12,7 +12,7 @@
 
 ## Same Pattern Rule
 - When similar files exist, use identical patterns
-- Examples: build.backend.js ↔ build.frontend.js
+- Examples: buildBackend() ↔ buildFrontend() in build.js
 - Ask user before applying pattern to other files
 - Maintain consistency: structure, naming, variable placement
 
