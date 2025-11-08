@@ -38,6 +38,7 @@ export async function buildFrontend(options = {}) {
 
   if (watch) {
     const ctx = await esbuild.context(buildOptions);
+    await ctx.rebuild();
     await ctx.watch();
   } else {
     await esbuild.build(buildOptions);
@@ -62,7 +63,6 @@ export async function buildBackend(options = {}) {
     platform: 'node',
     minify: !watch,
     sourcemap: watch,
-    logLevel: 'silent',
     alias: {
       '~': process.cwd()
     },
@@ -110,10 +110,14 @@ function reactShimPlugin() {
 }
 
 function cleanDistPlugin(outdir) {
+  let isFirstBuild = true;
   return {
     name: 'clean-dist',
     setup(build) {
       build.onStart(() => {
+        if (!isFirstBuild) return;
+        isFirstBuild = false;
+
         const fullPath = path.join(process.cwd(), outdir);
         if (fs.existsSync(fullPath)) {
           fs.rmSync(fullPath, { recursive: true, force: true });
@@ -139,7 +143,9 @@ function virtualRoutesPlugin() {
         return {
           contents: generateRoutesConfig(routes),
           loader: 'js',
-          resolveDir: process.cwd()
+          resolveDir: process.cwd(),
+          watchFiles: routes.map(r => r.file),
+          watchDirs: [path.join(process.cwd(), 'src')]
         };
       });
     }
@@ -163,10 +169,14 @@ function copyPublicPlugin(outdir) {
 }
 
 function injectApiKeyPlugin(outdir, apiKey) {
+  let isFirstBuild = true;
   return {
     name: 'inject-api-key',
     setup(build) {
       build.onEnd(() => {
+        if (!isFirstBuild) return;
+        isFirstBuild = false;
+
         const appIndexPath = path.join(process.cwd(), outdir, 'app/index.html');
 
         if (fs.existsSync(appIndexPath)) {
@@ -195,7 +205,9 @@ function virtualWebhooksPlugin() {
         return {
           contents: generateWebhooksConfig(webhooks),
           loader: 'js',
-          resolveDir: process.cwd()
+          resolveDir: process.cwd(),
+          watchFiles: webhooks.map(w => w.file),
+          watchDirs: [path.join(process.cwd(), 'src')]
         };
       });
     }
@@ -203,10 +215,14 @@ function virtualWebhooksPlugin() {
 }
 
 function generatePackageJsonPlugin(outdir, functionsPackage) {
+  let isFirstBuild = true;
   return {
     name: 'generate-package-json',
     setup(build) {
       build.onEnd(() => {
+        if (!isFirstBuild) return;
+        isFirstBuild = false;
+
         const targetPackage = {
           name: 'functions',
           main: 'index.js',
@@ -222,10 +238,14 @@ function generatePackageJsonPlugin(outdir, functionsPackage) {
 }
 
 function copyFirebaseConfigPlugin() {
+  let isFirstBuild = true;
   return {
     name: 'copy-firebase-config',
     setup(build) {
       build.onEnd(() => {
+        if (!isFirstBuild) return;
+        isFirstBuild = false;
+
         const cwd = process.cwd();
         const ryzizDir = path.join(cwd, RYZIZ_DIR);
 
@@ -347,8 +367,6 @@ function syncFirebaseConfig(baseConfig, projectRoot, targetDir) {
 
       const targetPath = path.join(targetDir, filename);
       fs.copyFileSync(sourcePath, targetPath);
-
-      console.log(`✓ Detected ${filename}, updating firebase.json`);
     }
   }
 
