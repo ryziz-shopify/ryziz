@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import routesConfig from './routes.config.js';
+import routesConfig from 'virtual:routes';
 
 function AppRoutes() {
   return (

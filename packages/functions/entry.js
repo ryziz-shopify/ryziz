@@ -2,17 +2,19 @@ import 'dotenv/config';
 import express from 'express';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
-import shopify, { cookieStorage } from './app.js';
-import apiRoutes from './routes.config.js';
-import webhookHandlers from './webhooks.config.js';
+import { shopify, cookieStorage } from './src/shopify.js';
+import apiRoutes from 'virtual:routes';
+import webhookHandlers from 'virtual:webhooks';
 
 initializeApp();
 
-export const auth = onRequest({ invoker: "public" }, createAuthApp());
-export const webhooks = onRequest({ invoker: "public" }, createWebhooksApp());
-export const api = onRequest({ invoker: "public" }, createApiApp());
+export const auth = onRequest({ invoker: "public" }, _createAuthApp());
+export const webhooks = onRequest({ invoker: "public" }, _createWebhooksApp());
+export const api = onRequest({ invoker: "public" }, _createApiApp());
 
-function createAuthApp() {
+// Implementation
+
+function _createAuthApp() {
   const app = express();
 
   app.get(shopify.config.auth.path, async (req, res, next) => {
@@ -42,13 +44,13 @@ function createAuthApp() {
   return app;
 }
 
-function createWebhooksApp() {
+function _createWebhooksApp() {
   const app = express();
   app.post(shopify.config.webhooks.path, shopify.processWebhooks({ webhookHandlers }));
   return app;
 }
 
-function createApiApp() {
+function _createApiApp() {
   const app = express();
   const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 

@@ -5,32 +5,38 @@ import path from 'path';
 
 const EMULATOR_DATA_DIR = path.join(process.cwd(), '.ryziz/emulator-data');
 
-export async function pullFirestore(serviceAccountPath) {
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+export const connectToFirestore = _connectToFirestore;
+export const prepareEmulatorDataDir = _prepareEmulatorDataDir;
+export const exportCollectionToFile = _exportCollectionToFile;
 
+// Implementation
+
+async function _connectToFirestore(serviceAccountPath) {
+  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
   initializeApp({ credential: cert(serviceAccount) });
 
   const db = getFirestore();
   const collections = await db.listCollections();
 
+  return collections;
+}
+
+function _prepareEmulatorDataDir() {
   if (fs.existsSync(EMULATOR_DATA_DIR)) {
     fs.rmSync(EMULATOR_DATA_DIR, { recursive: true, force: true });
   }
   fs.mkdirSync(EMULATOR_DATA_DIR, { recursive: true });
-
-  return collections.map(collection => ({
-    id: collection.id,
-    export: async () => {
-      const data = await exportCollection(collection);
-      fs.writeFileSync(
-        `${EMULATOR_DATA_DIR}/${collection.id}.json`,
-        JSON.stringify(data, null, 2)
-      );
-    }
-  }));
 }
 
-async function exportCollection(collection) {
+async function _exportCollectionToFile(collection) {
+  const data = await _exportCollection(collection);
+  fs.writeFileSync(
+    `${EMULATOR_DATA_DIR}/${collection.id}.json`,
+    JSON.stringify(data, null, 2)
+  );
+}
+
+async function _exportCollection(collection) {
   const data = {};
   let lastDoc = null;
   const batchSize = 1000;

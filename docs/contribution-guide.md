@@ -68,16 +68,16 @@ Ryziz is a monorepo framework for building Shopify embedded apps on Firebase.
 
 **Simple descriptive names without prefixes**
 
-Examples: task.js, spawn.js, shopify.js, build.js, middleware.js, app.js, routes.jsx
+Examples: cli.js, build.js, shopify.js, init.js, dev.js, deploy.js, entry.js, entry.jsx
 
 **Avoid prefixes or compound names**
 
 ❌ util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
 
 **Package-specific patterns:**
-- CLI: task.js, build.js
-- Functions: middleware.js, app.js
-- Router: shopify.js, routes.jsx
+- CLI: cli.js, build.js, init.js, dev.js, deploy.js, pull.js
+- Functions: index.js (SDK), entry.js (build entry), src/shopify.js (shared)
+- Router: index.js (SDK), src/entry.jsx (build entry), src/shopify.js (wrapper)
 
 **Why** - Single responsibility per file makes purpose clear from name alone. Flat structure enables easy finding without nested navigation.
 
@@ -227,13 +227,13 @@ program
 **Utility functions stay pure:**
 
 ```js
-// packages/cli/src/shopify.js
-export async function updateConfig(tunnelUrl, configPath) {
+// packages/cli/src/dev.js
+export async function updateShopifyConfig(tunnelUrl, configPath) {
   // Just do the work, return data
   const tomlContent = fs.readFileSync(configPath, 'utf8');
   const tomlData = parse(tomlContent);
   // ...
-  return tomlData;
+  fs.writeFileSync(configPath, updatedContent);
 }
 ```
 
@@ -358,7 +358,7 @@ Build generates new package.json with dependencies copied from functions package
 
 ### Cloud Functions
 
-Implementation in `packages/functions/src/entry.js`
+Implementation in `packages/functions/entry.js`
 
 Framework exports separate Cloud Functions for different concerns:
 
@@ -516,7 +516,7 @@ Before submitting changes:
 - Modify when: Adding new API route types, changing function exports, webhook handling
 - Search for: Function names like `virtualWebhooksPlugin` or `buildBackend`
 
-**Cloud Functions entry** (`packages/functions/src/entry.js`):
+**Cloud Functions entry** (`packages/functions/entry.js`):
 - Modify when: Adding new Cloud Function, changing middleware, modifying auth/webhook handlers
 - Search for: Exported function names `auth`, `webhooks`, `api`
 
@@ -564,7 +564,7 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **Structure** - Use Commander.js `.command()` API with `.action()` handler
 
-**Task UI** - Use `createTask` from `task.js` for consistent visual output and progress tracking
+**Task UI** - Use TaskContext from `packages/cli/src/cli.js` for consistent visual output and progress tracking
 
 **Reference** - Study existing commands (init, dev, link, deploy) for structure and patterns. Each demonstrates different task organization (sequential, parallel, nested).
 
@@ -576,11 +576,11 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **Backend build** - `packages/cli/src/build.js` (buildBackend function)
 
-**Cloud Functions** - `packages/functions/src/entry.js`
+**Cloud Functions** - `packages/functions/entry.js`
 
-**Shopify config** - `packages/functions/src/app.js`
+**Shopify config** - `packages/functions/src/shopify.js`
 
-**Task utilities** - `packages/cli/src/task.js`
+**CLI framework** - `packages/cli/src/cli.js` (CLI, TaskContext, spawn)
 
 **Template config** - `templates/ryziz/shopify.app.toml`
 
