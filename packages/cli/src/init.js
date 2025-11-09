@@ -2,27 +2,25 @@ import { readdirSync, existsSync } from 'fs';
 import { stat, cp, copyFile, rename } from 'fs/promises';
 import { join, basename } from 'path';
 
-export const locateTemplate = _locateTemplate;
-export const getFiles = _getFiles;
-export const copyFile = _copyFile;
+export const scanTemplate = _scanTemplate;
+export const copy = _copy;
 export const restoreDotfiles = _restoreDotfiles;
 
 // Implementation
 
-async function _locateTemplate() {
+async function _scanTemplate() {
   const module = await import('module');
   const packageJsonPath = module.createRequire(import.meta.url)
     .resolve('@ryziz-shopify/ryziz/package.json');
-  return join(packageJsonPath, '..');
+  const templatePath = join(packageJsonPath, '..');
+
+  return readdirSync(templatePath)
+    .filter(file => file !== 'node_modules')
+    .map(file => join(templatePath, file));
 }
 
-function _getFiles(ryzizPackagePath) {
-  return readdirSync(ryzizPackagePath).filter(file => file !== 'node_modules');
-}
-
-async function _copyFile(file, ryzizPackagePath, targetDir) {
-  const sourcePath = join(ryzizPackagePath, file);
-  const targetPath = join(targetDir, file);
+async function _copy(sourcePath, targetDir) {
+  const targetPath = join(targetDir, basename(sourcePath));
 
   if ((await stat(sourcePath)).isDirectory()) {
     await cp(sourcePath, targetPath, { recursive: true });

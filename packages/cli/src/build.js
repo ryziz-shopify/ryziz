@@ -12,7 +12,6 @@ const COMPLIANCE_TOPICS = ['customers/data_request', 'customers/redact', 'shop/r
 
 export const scanConfigs = _scanConfigs;
 export const saveCache = _saveCache;
-export const getCache = _getCache;
 export const loadEnv = _loadEnv;
 export const writeEnv = _writeEnv;
 export const ensureAccess = _ensureAccess;
@@ -56,11 +55,6 @@ async function _scanConfigs(options = {}) {
 
 function _saveCache(configPath) {
   _writeCache({ shopifyConfig: configPath });
-}
-
-function _getCache() {
-  const cache = _readCache();
-  return cache.shopifyConfig;
 }
 
 function _loadEnv(configPath) {

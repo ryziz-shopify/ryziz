@@ -3,20 +3,10 @@
 import './patches.js';
 
 import { CLI, spawn } from './src/cli.js';
-import { locateTemplate, getFiles, copyFile, restoreDotfiles } from './src/init.js';
-import {
-  scanConfigs,
-  saveCache,
-  getCache,
-  ensureAccess,
-  loadEnv,
-  writeEnv,
-  updateConfig,
-  buildWeb,
-  buildFunctions
-} from './src/build.js';
+import { scanTemplate, copy, restoreDotfiles } from './src/init.js';
+import { scanConfigs, saveCache, ensureAccess, loadEnv, writeEnv, updateConfig, buildWeb, buildFunctions } from './src/build.js';
 import { connect, prepareDir, exportCollection } from './src/pull.js';
-import { join, basename } from 'path';
+import { basename } from 'path';
 import { existsSync } from 'fs';
 
 const cli = new CLI('ryziz', 'Ryziz CLI', '0.1.0');
@@ -24,39 +14,30 @@ const cli = new CLI('ryziz', 'Ryziz CLI', '0.1.0');
 cli
   .command('init', 'Initialize a new Ryziz project')
   .action(async (options, ctx) => {
-    let ryzizPackagePath = '';
-    const targetDir = process.cwd();
-
-    await ctx.task('Init', async (ctx) => {
-      await ctx.task('Setup project', async () => {
-        await ctx.task('Locate template', async () => {
-          ryzizPackagePath = await locateTemplate();
-        });
-
-        await ctx.parallel('Copy files to project', async (ctx) => {
-          const files = getFiles(ryzizPackagePath);
-          for (const file of files) {
-            await ctx.task(file, async () => {
-              await copyFile(file, ryzizPackagePath, targetDir);
-            });
-          }
-        });
-
-        await ctx.task('Restore dotfiles', async () => {
-          await restoreDotfiles(targetDir);
-        });
-
-        await ctx.task('Configure project', async () => {
-          await ctx.spawn('Clean package config', 'npm', ['pkg', 'delete', 'bin']);
-          await ctx.spawn('Set package name', 'npm', ['pkg', 'set', `name=${basename(process.cwd())}`]);
-          await ctx.spawn('Move CLI dependency', 'npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')']);
-          await ctx.spawn('Delete CLI from dependencies', 'npm', ['pkg', 'delete', 'dependencies.@ryziz-shopify/cli']);
-        });
+    ctx.task('Init', async (ctx) => {
+      ctx.parallel('Copy files to project', async (ctx) => {
+        const files = await scanTemplate();
+        for (const file of files) {
+          ctx.task(basename(file), async () => {
+            await copy(file, process.cwd());
+          });
+        }
       });
 
-      await ctx.spawn('Install dependencies', 'npm', ['install']);
+      ctx.task('Restore dotfiles', async () => {
+        await restoreDotfiles(process.cwd());
+      });
 
-      await ctx.task('Done', (ctx) => {
+      ctx.task('Configure project', async () => {
+        ctx.spawn('Clean package config', 'npm', ['pkg', 'delete', 'bin']);
+        ctx.spawn('Set package name', 'npm', ['pkg', 'set', `name=${basename(process.cwd())}`]);
+        ctx.spawn('Move CLI dependency', 'npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')']);
+        ctx.spawn('Delete CLI from dependencies', 'npm', ['pkg', 'delete', 'dependencies.@ryziz-shopify/cli']);
+      });
+
+      ctx.spawn('Install dependencies', 'npm', ['install']);
+
+      ctx.task('Done', () => {
         ctx.title = 'Init completed';
         ctx.output = 'Next: npm run link, then npm run dev';
       });
@@ -69,12 +50,13 @@ cli
   .action(async (options, ctx) => {
     const shopify = {
       configPath: '',
+      fromCache: false,
       env: {},
       tunnel: ''
     };
 
-    await ctx.task('Select config', async () => {
-      await ctx.task('Scan configs', async () => {
+    ctx.task('Select config', async (ctx) => {
+      ctx.task('Scan configs', async () => {
         const result = await scanConfigs({ skipCache: options.reset });
 
         if (result.configs.length === 0) {
@@ -83,10 +65,11 @@ cli
 
         if (result.configs.length === 1 || result.fromCache) {
           shopify.configPath = result.configs[0].value;
+          shopify.fromCache = result.fromCache;
         }
       });
 
-      await ctx.task('Choose config', async (ctx) => {
+      ctx.task('Choose config', async (ctx) => {
         if (!shopify.configPath) {
           const result = await scanConfigs({ skipCache: true });
           shopify.configPath = await ctx.select({
@@ -100,29 +83,27 @@ cli
         }
       });
 
-      await ctx.task('Validate config', async () => {
+      ctx.task('Validate config', async () => {
         ensureAccess(shopify.configPath);
       });
 
-      await ctx.task('Done', (ctx) => {
-        const cachedConfig = getCache();
-        const fromCache = cachedConfig === shopify.configPath;
+      ctx.task('Done', () => {
         ctx.title = 'Config selected';
-        ctx.output = fromCache
+        ctx.output = shopify.fromCache
           ? `${shopify.configPath} (cached, use --reset to change)`
           : shopify.configPath;
       });
     });
 
-    await ctx.task('Dev', async () => {
-      await ctx.task('Load environment', async () => {
+    ctx.task('Dev', async (ctx) => {
+      ctx.task('Load environment', async () => {
         shopify.env = loadEnv(shopify.configPath);
       });
 
-      await ctx.parallel('Build', async (ctx) => {
-        await ctx.task('Setup environment', async (ctx) => {
-          await ctx.parallel('Fetch secrets', async (ctx) => {
-            await ctx.spawn('Load API secret', 'shopify', [
+      ctx.parallel('Build', async (ctx) => {
+        ctx.task('Setup environment', async (ctx) => {
+          ctx.parallel('Fetch secrets', async (ctx) => {
+            ctx.spawn('Load API secret', 'shopify', [
               'app',
               'env',
               'show',
@@ -138,7 +119,7 @@ cli
               }
             });
 
-            await ctx.spawn('Create tunnel', 'cloudflared', [
+            ctx.spawn('Create tunnel', 'cloudflared', [
               'tunnel',
               '--url',
               'http://localhost:8080'
@@ -159,28 +140,28 @@ cli
             });
           });
 
-          await ctx.task('Write .env', async () => {
+          ctx.task('Write .env', async () => {
             writeEnv(shopify.env, shopify.tunnel);
           });
         });
 
-        await ctx.task('Build web', async () => {
+        ctx.task('Build web', async () => {
           await buildWeb({ watch: true, apiKey: shopify.env.SHOPIFY_API_KEY });
         });
 
-        await ctx.task('Setup functions', async (ctx) => {
-          await ctx.task('Build functions', async () => {
+        ctx.task('Setup functions', async (ctx) => {
+          ctx.task('Build functions', async () => {
             await buildFunctions({ watch: true });
           });
 
-          await ctx.spawn('Install packages', 'npm', ['install'], {
+          ctx.spawn('Install packages', 'npm', ['install'], {
             cwd: '.ryziz/functions'
           });
         });
       });
 
-      await ctx.parallel('Start', async (ctx) => {
-        await ctx.spawn('Start emulators', 'firebase', [
+      ctx.parallel('Start', async (ctx) => {
+        ctx.spawn('Start emulators', 'firebase', [
           'emulators:start',
           '--import=../emulator-data',
           '--export-on-exit=../emulator-data'
@@ -196,9 +177,9 @@ cli
           }
         });
 
-        await ctx.task('Register app', async (ctx) => {
+        ctx.task('Register app', async () => {
           await updateConfig(shopify.tunnel, shopify.configPath);
-          await ctx.spawn('Deploy app config', 'shopify', [
+          ctx.spawn('Deploy app config', 'shopify', [
             'app',
             'deploy',
             '--config',
@@ -208,7 +189,7 @@ cli
         });
       });
 
-      await ctx.task('Done', (ctx) => {
+      ctx.task('Done', () => {
         ctx.title = 'Dev started';
         ctx.output = shopify.tunnel;
       });
@@ -234,8 +215,8 @@ cli
       env: {}
     };
 
-    await ctx.task('Select config', async () => {
-      await ctx.task('Scan configs', async () => {
+    ctx.task('Select config', async (ctx) => {
+      ctx.task('Scan configs', async () => {
         const result = await scanConfigs({ skipCache: true });
 
         if (result.configs.length === 0) {
@@ -247,7 +228,7 @@ cli
         }
       });
 
-      await ctx.task('Choose config', async (ctx) => {
+      ctx.task('Choose config', async (ctx) => {
         if (!shopify.configPath) {
           const result = await scanConfigs({ skipCache: true });
           shopify.configPath = await ctx.select({
@@ -260,23 +241,23 @@ cli
         }
       });
 
-      await ctx.task('Validate config', async () => {
+      ctx.task('Validate config', async () => {
         ensureAccess(shopify.configPath);
       });
 
-      await ctx.task('Done', (ctx) => {
+      ctx.task('Done', () => {
         ctx.title = 'Config selected';
         ctx.output = shopify.configPath;
       });
     });
 
-    await ctx.task('Deploy', async () => {
-      await ctx.task('Load environment', async () => {
+    ctx.task('Deploy', async (ctx) => {
+      ctx.task('Load environment', async () => {
         shopify.env = loadEnv(shopify.configPath);
       });
 
-      await ctx.task('Setup environment', async () => {
-        await ctx.spawn('Fetch API secret', 'shopify', [
+      ctx.task('Setup environment', async (ctx) => {
+        ctx.spawn('Fetch API secret', 'shopify', [
           'app',
           'env',
           'show',
@@ -292,27 +273,27 @@ cli
           }
         });
 
-        await ctx.task('Write .env', async () => {
+        ctx.task('Write .env', async () => {
           writeEnv(shopify.env);
         });
       }, {
         skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
       });
 
-      await ctx.parallel('Build production', async (ctx) => {
-        await ctx.task('Build frontend', async () => {
+      ctx.parallel('Build production', async (ctx) => {
+        ctx.task('Build frontend', async () => {
           await buildWeb({
             watch: false,
             apiKey: shopify.env.SHOPIFY_API_KEY
           });
         });
 
-        await ctx.task('Build backend', async (ctx) => {
-          await ctx.task('Build functions', async () => {
+        ctx.task('Setup functions', async (ctx) => {
+          ctx.task('Build functions', async () => {
             await buildFunctions({ watch: false });
           });
 
-          await ctx.spawn('Install production packages', 'npm', ['install', '--production'], {
+          ctx.spawn('Install production packages', 'npm', ['install', '--production'], {
             cwd: '.ryziz/functions'
           });
         });
@@ -320,24 +301,26 @@ cli
         skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
       });
 
-      await ctx.spawn('Deploy to Firebase', 'firebase', [
-        'deploy',
-        '--only',
-        'hosting,functions'
-      ], {
-        cwd: '.ryziz/functions',
-        skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
+      ctx.parallel('Deploy services', async (ctx) => {
+        ctx.spawn('Deploy to Firebase', 'firebase', [
+          'deploy',
+          '--only',
+          'hosting,functions'
+        ], {
+          cwd: '.ryziz/functions',
+          skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
+        });
+
+        ctx.spawn('Deploy to Shopify', 'shopify', [
+          'app',
+          'deploy',
+          '--config',
+          shopify.configPath,
+          '--force'
+        ]);
       });
 
-      await ctx.spawn('Deploy to Shopify', 'shopify', [
-        'app',
-        'deploy',
-        '--config',
-        shopify.configPath,
-        '--force'
-      ]);
-
-      await ctx.task('Done', (ctx) => {
+      ctx.task('Done', () => {
         ctx.title = 'Deploy completed';
         ctx.output = shopifyOnly
           ? 'Shopify config deployed'
@@ -352,8 +335,8 @@ cli
     let serviceAccountPath = '';
     let collections = [];
 
-    await ctx.task('Pull', async () => {
-      await ctx.task('Enter service account path', async (ctx) => {
+    ctx.task('Pull', async (ctx) => {
+      ctx.task('Enter service account path', async (ctx) => {
         serviceAccountPath = await ctx.input({
           message: 'Paste absolute path to service account JSON file'
         });
@@ -363,20 +346,20 @@ cli
         }
       });
 
-      await ctx.task('Connect to production', async () => {
+      ctx.task('Connect to production', async () => {
         prepareDir();
         collections = await connect(serviceAccountPath);
       });
 
-      await ctx.parallel('Export collections', async (ctx) => {
+      ctx.parallel('Export collections', async (ctx) => {
         for (const collection of collections) {
-          await ctx.task(collection.id, async () => {
+          ctx.task(collection.id, async () => {
             await exportCollection(collection);
           });
         }
       });
 
-      await ctx.task('Done', (ctx) => {
+      ctx.task('Done', () => {
         ctx.title = 'Pull completed';
         ctx.output = 'Production data synced to .ryziz/emulator-data';
       });

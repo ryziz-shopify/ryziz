@@ -12,7 +12,7 @@
 
 ## Same Pattern Rule
 - When similar files exist, use identical patterns
-- Examples: buildWeb() ↔ buildFunctions() in build.js, getCache() ↔ saveCache()
+- Examples: buildWeb() ↔ buildFunctions() in build.js, loadEnv() ↔ writeEnv()
 - Ask user before applying pattern to other files
 - Maintain consistency: structure, naming, variable placement
 
@@ -38,7 +38,7 @@
 
 **Verb-First Pattern (Internal Utils):**
 - Format: `verb + [qualifier] + noun` (max 2-3 words)
-- Examples: `scanConfigs`, `loadEnv`, `buildWeb`, `copyFile`
+- Examples: `scanConfigs`, `loadEnv`, `buildWeb`, `copy`
 - ❌ Avoid: `scanShopifyConfigs`, `loadEnvironment`, `buildFrontend`, `copyFileToProject`
 
 **Naming Rules:**
@@ -60,7 +60,7 @@
 
    // ✅ Good - use parameters instead
    saveCache(config)
-   copyFile(file, target)
+   copy(file, target)
    ```
 
 3. **Simplify qualifiers** - Use shorter, common abbreviations
