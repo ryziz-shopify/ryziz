@@ -75,9 +75,9 @@ Examples: cli.js, build.js, shopify.js, init.js, dev.js, deploy.js, entry.js, en
 ❌ util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
 
 **Package-specific patterns:**
-- CLI: cli.js, build.js, init.js, dev.js, deploy.js, pull.js
+- CLI: cli.js, build.js, init.js, dev.js, deploy.js, pull.js, patches.js
 - Functions: index.js (SDK), entry.js (build entry), src/shopify.js (shared)
-- Router: index.js (SDK), src/entry.jsx (build entry), src/shopify.js (wrapper)
+- Router: index.js (SDK), entry.jsx (build entry)
 
 **Why** - Single responsibility per file makes purpose clear from name alone. Flat structure enables easy finding without nested navigation.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import './src/patches.js';
+import './patches.js';
 
 import { CLI, spawn } from './src/cli.js';
 import { locateTemplate, getProjectFiles, copyFileToProject, restoreDotfiles } from './src/init.js';

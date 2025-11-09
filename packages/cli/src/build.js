@@ -132,7 +132,7 @@ async function _buildFrontend(options = {}) {
 
   const buildOptions = {
     entryPoints: {
-      index: '@ryziz-shopify/router/src/entry.jsx'
+      index: '@ryziz-shopify/router/entry.jsx'
     },
     bundle: true,
     outdir,

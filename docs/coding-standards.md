@@ -26,9 +26,9 @@
 
 ## Naming
 - Files: Simple descriptive names without prefixes
-  - Examples: cli.js, build.js, shopify.js, init.js, dev.js, deploy.js, entry.js, entry.jsx
+  - Examples: cli.js, build.js, shopify.js, init.js, dev.js, deploy.js, entry.js, entry.jsx, patches.js
   - ❌ Avoid: util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
-  - Pattern: CLI (cli.js, build.js, init.js, dev.js), Functions (shopify.js, entry.js), Router (shopify.js, entry.jsx)
+  - Pattern: CLI (cli.js, build.js, init.js, dev.js, patches.js), Functions (shopify.js, entry.js), Router (entry.jsx)
 - Single responsibility per file
 - Flat structure for easy finding
 - Variables: camelCase
