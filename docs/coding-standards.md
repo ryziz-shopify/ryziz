@@ -12,7 +12,7 @@
 
 ## Same Pattern Rule
 - When similar files exist, use identical patterns
-- Examples: buildBackend() ↔ buildFrontend() in build.js
+- Examples: buildWeb() ↔ buildFunctions() in build.js, getCache() ↔ saveCache()
 - Ask user before applying pattern to other files
 - Maintain consistency: structure, naming, variable placement
 
@@ -25,13 +25,81 @@
 6. Apply same changes to similar files (ask first)
 
 ## Naming
-- Files: Simple descriptive names without prefixes
+
+### Files
+- Simple descriptive names without prefixes
   - Examples: cli.js, build.js, shopify.js, init.js, dev.js, deploy.js, entry.js, entry.jsx, patches.js
   - ❌ Avoid: util.shopify.js, functions.entry.js, exports.shopify.js, router.routes.jsx
   - Pattern: CLI (cli.js, build.js, init.js, dev.js, patches.js), Functions (shopify.js, entry.js), Router (entry.jsx)
 - Single responsibility per file
 - Flat structure for easy finding
-- Variables: camelCase
+
+### Functions & Exports
+
+**Verb-First Pattern (Internal Utils):**
+- Format: `verb + [qualifier] + noun` (max 2-3 words)
+- Examples: `scanConfigs`, `loadEnv`, `buildWeb`, `copyFile`
+- ❌ Avoid: `scanShopifyConfigs`, `loadEnvironment`, `buildFrontend`, `copyFileToProject`
+
+**Naming Rules:**
+
+1. **Remove redundant context** - File/domain context implies details
+   ```js
+   // ❌ Bad - redundant "Shopify" in build.js
+   scanShopifyConfigs()
+
+   // ✅ Good - "Shopify" implied by context
+   scanConfigs()
+   ```
+
+2. **Drop prepositions** - Destination/source implied by parameters
+   ```js
+   // ❌ Bad - "To" adds no value
+   saveConfigToCache(config)
+   copyFileToProject(file, target)
+
+   // ✅ Good - use parameters instead
+   saveCache(config)
+   copyFile(file, target)
+   ```
+
+3. **Simplify qualifiers** - Use shorter, common abbreviations
+   ```js
+   // ❌ Bad - too verbose
+   loadEnvironment()
+   buildFrontend()
+   prepareEmulatorDataDir()
+
+   // ✅ Good - concise and clear
+   loadEnv()
+   buildWeb()
+   prepareDir()
+   ```
+
+4. **Max 3 parts rule** - Keep names short
+   ```
+   Format: verb + [qualifier] + noun
+           │        │          │
+           └─ action  1 word    required
+                      (optional)
+
+   ✅ Good: loadEnv, saveCache, buildWeb
+   ⚠️  OK: ensureAccess (3 parts)
+   ❌ Bad: prepareEmulatorDataDir (4+ parts)
+   ```
+
+**Noun Pattern (Public API & Services):**
+- Use nouns for: classes, instances, services, middleware
+- Examples: `CLI`, `db`, `shopify`, `withShopify`, `auth`, `api`
+- Keep standard conventions: `with*` for middleware, uppercase for constants
+
+**Convention-Based Patterns:**
+- HTTP methods: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`
+- Constants: `TOPIC`, `CACHE_PATH` (SCREAMING_SNAKE_CASE)
+- Handlers: `handle` (for webhooks, events)
+
+### Variables
+- camelCase
 - Clear, concise names
 - No intermediate variables if used once (use inline)
 

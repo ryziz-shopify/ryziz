@@ -146,7 +146,7 @@ const { configs, fromCache } = await scanConfigs({ skipCache });
 **Main function at top, helpers below:**
 
 ```js
-export async function buildFrontend(options = {}) {
+export async function buildWeb(options = {}) {
   const watch = options.watch || false;
   const outdir = path.join(RYZIZ_DIR, 'public');
 
@@ -228,7 +228,7 @@ program
 
 ```js
 // packages/cli/src/dev.js
-export async function updateShopifyConfig(tunnelUrl, configPath) {
+export async function updateConfig(tunnelUrl, configPath) {
   // Just do the work, return data
   const tomlContent = fs.readFileSync(configPath, 'utf8');
   const tomlData = parse(tomlContent);
@@ -292,7 +292,7 @@ Removes `bin` field from user's package.json after init completes.
 
 ## Frontend Build Pipeline
 
-Implementation in `packages/cli/src/build.js` (`buildFrontend` function)
+Implementation in `packages/cli/src/build.js` (`buildWeb` function)
 
 ### Build Strategy
 
@@ -322,7 +322,7 @@ Shopify API key injected into HTML template during build.
 
 ## Backend Build Pipeline
 
-Implementation in `packages/cli/src/build.js` (`buildBackend` function)
+Implementation in `packages/cli/src/build.js` (`buildFunctions` function)
 
 ### Build Strategy
 
@@ -510,11 +510,11 @@ Before submitting changes:
 
 **Frontend build** (`packages/cli/src/build.js`):
 - Modify when: Adding new page types, changing bundle format, altering route discovery
-- Search for: Function names like `virtualRoutesPlugin` or `buildFrontend`
+- Search for: Function names like `virtualRoutesPlugin` or `buildWeb`
 
 **Backend build** (`packages/cli/src/build.js`):
 - Modify when: Adding new API route types, changing function exports, webhook handling
-- Search for: Function names like `virtualWebhooksPlugin` or `buildBackend`
+- Search for: Function names like `virtualWebhooksPlugin` or `buildFunctions`
 
 **Cloud Functions entry** (`packages/functions/entry.js`):
 - Modify when: Adding new Cloud Function, changing middleware, modifying auth/webhook handlers
@@ -572,9 +572,9 @@ To add new CLI command, follow existing command patterns in `packages/cli/index.
 
 **CLI commands** - `packages/cli/index.js`
 
-**Frontend build** - `packages/cli/src/build.js` (buildFrontend function)
+**Frontend build** - `packages/cli/src/build.js` (buildWeb function)
 
-**Backend build** - `packages/cli/src/build.js` (buildBackend function)
+**Backend build** - `packages/cli/src/build.js` (buildFunctions function)
 
 **Cloud Functions** - `packages/functions/entry.js`
 

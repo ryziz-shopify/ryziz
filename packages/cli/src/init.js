@@ -3,8 +3,8 @@ import { stat, cp, copyFile, rename } from 'fs/promises';
 import { join, basename } from 'path';
 
 export const locateTemplate = _locateTemplate;
-export const getProjectFiles = _getProjectFiles;
-export const copyFileToProject = _copyFileToProject;
+export const getFiles = _getFiles;
+export const copyFile = _copyFile;
 export const restoreDotfiles = _restoreDotfiles;
 
 // Implementation
@@ -16,11 +16,11 @@ async function _locateTemplate() {
   return join(packageJsonPath, '..');
 }
 
-function _getProjectFiles(ryzizPackagePath) {
+function _getFiles(ryzizPackagePath) {
   return readdirSync(ryzizPackagePath).filter(file => file !== 'node_modules');
 }
 
-async function _copyFileToProject(file, ryzizPackagePath, targetDir) {
+async function _copyFile(file, ryzizPackagePath, targetDir) {
   const sourcePath = join(ryzizPackagePath, file);
   const targetPath = join(targetDir, file);
 

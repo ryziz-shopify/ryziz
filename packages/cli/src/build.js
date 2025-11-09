@@ -10,19 +10,19 @@ const RYZIZ_DIR = '.ryziz';
 const CACHE_PATH = path.join(process.cwd(), '.ryziz/cache.json');
 const COMPLIANCE_TOPICS = ['customers/data_request', 'customers/redact', 'shop/redact'];
 
-export const scanShopifyConfigs = _scanShopifyConfigs;
-export const saveConfigToCache = _saveConfigToCache;
-export const getCachedConfig = _getCachedConfig;
-export const loadEnvironment = _loadEnvironment;
-export const writeEnvFile = _writeEnvFile;
-export const ensureAccessConfig = _ensureAccessConfig;
-export const updateShopifyConfig = _updateShopifyConfig;
-export const buildFrontend = _buildFrontend;
-export const buildBackend = _buildBackend;
+export const scanConfigs = _scanConfigs;
+export const saveCache = _saveCache;
+export const getCache = _getCache;
+export const loadEnv = _loadEnv;
+export const writeEnv = _writeEnv;
+export const ensureAccess = _ensureAccess;
+export const updateConfig = _updateConfig;
+export const buildWeb = _buildWeb;
+export const buildFunctions = _buildFunctions;
 
 // Implementation
 
-async function _scanShopifyConfigs(options = {}) {
+async function _scanConfigs(options = {}) {
   const { skipCache = false } = options;
   const pattern = path.join(process.cwd(), 'shopify.app*.toml');
   const files = await glob(pattern);
@@ -54,16 +54,16 @@ async function _scanShopifyConfigs(options = {}) {
   return { configs: allConfigs, fromCache: false };
 }
 
-function _saveConfigToCache(configPath) {
+function _saveCache(configPath) {
   _writeCache({ shopifyConfig: configPath });
 }
 
-function _getCachedConfig() {
+function _getCache() {
   const cache = _readCache();
   return cache.shopifyConfig;
 }
 
-function _loadEnvironment(configPath) {
+function _loadEnv(configPath) {
   const tomlPath = path.join(process.cwd(), configPath);
   const tomlContent = fs.readFileSync(tomlPath, 'utf8');
   const tomlData = parse(tomlContent);
@@ -75,7 +75,7 @@ function _loadEnvironment(configPath) {
   };
 }
 
-function _writeEnvFile(env, tunnelUrl = null) {
+function _writeEnv(env, tunnelUrl = null) {
   const envToWrite = tunnelUrl
     ? { ...env, SHOPIFY_HOST_NAME: tunnelUrl.replace(/^https?:\/\//, '') }
     : env;
@@ -88,7 +88,7 @@ function _writeEnvFile(env, tunnelUrl = null) {
   );
 }
 
-function _ensureAccessConfig(configPath) {
+function _ensureAccess(configPath) {
   const tomlPath = path.join(process.cwd(), configPath);
   const tomlContent = fs.readFileSync(tomlPath, 'utf8');
   const tomlData = parse(tomlContent);
@@ -101,7 +101,7 @@ function _ensureAccessConfig(configPath) {
   fs.writeFileSync(tomlPath, updatedContent);
 }
 
-async function _updateShopifyConfig(tunnelUrl, configPath) {
+async function _updateConfig(tunnelUrl, configPath) {
   const tomlPath = path.join(process.cwd(), configPath);
   const tomlContent = fs.readFileSync(tomlPath, 'utf8');
   const tomlData = parse(tomlContent);
@@ -125,7 +125,7 @@ async function _updateShopifyConfig(tunnelUrl, configPath) {
   fs.writeFileSync(tomlPath, updatedContent);
 }
 
-async function _buildFrontend(options = {}) {
+async function _buildWeb(options = {}) {
   const watch = options.watch || false;
   const apiKey = options.apiKey || '';
   const outdir = path.join(RYZIZ_DIR, 'public');
@@ -163,7 +163,7 @@ async function _buildFrontend(options = {}) {
   }
 }
 
-async function _buildBackend(options = {}) {
+async function _buildFunctions(options = {}) {
   const watch = options.watch || false;
   const outdir = path.join(RYZIZ_DIR, 'functions');
 

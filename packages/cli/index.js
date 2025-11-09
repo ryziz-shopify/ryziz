@@ -3,19 +3,19 @@
 import './patches.js';
 
 import { CLI, spawn } from './src/cli.js';
-import { locateTemplate, getProjectFiles, copyFileToProject, restoreDotfiles } from './src/init.js';
+import { locateTemplate, getFiles, copyFile, restoreDotfiles } from './src/init.js';
 import {
-  scanShopifyConfigs,
-  saveConfigToCache,
-  getCachedConfig,
-  ensureAccessConfig,
-  loadEnvironment,
-  writeEnvFile,
-  updateShopifyConfig,
-  buildFrontend,
-  buildBackend
+  scanConfigs,
+  saveCache,
+  getCache,
+  ensureAccess,
+  loadEnv,
+  writeEnv,
+  updateConfig,
+  buildWeb,
+  buildFunctions
 } from './src/build.js';
-import { connectToFirestore, prepareEmulatorDataDir, exportCollectionToFile } from './src/pull.js';
+import { connect, prepareDir, exportCollection } from './src/pull.js';
 import { join, basename } from 'path';
 import { existsSync } from 'fs';
 
@@ -34,10 +34,10 @@ cli
         });
 
         await ctx.parallel('Copy files to project', async (ctx) => {
-          const files = getProjectFiles(ryzizPackagePath);
+          const files = getFiles(ryzizPackagePath);
           for (const file of files) {
             await ctx.task(file, async () => {
-              await copyFileToProject(file, ryzizPackagePath, targetDir);
+              await copyFile(file, ryzizPackagePath, targetDir);
             });
           }
         });
@@ -75,7 +75,7 @@ cli
 
     await ctx.task('Select config', async () => {
       await ctx.task('Scan configs', async () => {
-        const result = await scanShopifyConfigs({ skipCache: options.reset });
+        const result = await scanConfigs({ skipCache: options.reset });
 
         if (result.configs.length === 0) {
           throw new Error('No Shopify config found. Try running: npm run link');
@@ -88,7 +88,7 @@ cli
 
       await ctx.task('Choose config', async (ctx) => {
         if (!shopify.configPath) {
-          const result = await scanShopifyConfigs({ skipCache: true });
+          const result = await scanConfigs({ skipCache: true });
           shopify.configPath = await ctx.select({
             message: 'Select Shopify config',
             choices: result.configs.map(c => ({
@@ -96,16 +96,16 @@ cli
               value: c.value
             }))
           });
-          saveConfigToCache(shopify.configPath);
+          saveCache(shopify.configPath);
         }
       });
 
       await ctx.task('Validate config', async () => {
-        ensureAccessConfig(shopify.configPath);
+        ensureAccess(shopify.configPath);
       });
 
       await ctx.task('Done', (ctx) => {
-        const cachedConfig = getCachedConfig();
+        const cachedConfig = getCache();
         const fromCache = cachedConfig === shopify.configPath;
         ctx.title = 'Config selected';
         ctx.output = fromCache
@@ -116,7 +116,7 @@ cli
 
     await ctx.task('Dev', async () => {
       await ctx.task('Load environment', async () => {
-        shopify.env = loadEnvironment(shopify.configPath);
+        shopify.env = loadEnv(shopify.configPath);
       });
 
       await ctx.parallel('Build', async (ctx) => {
@@ -160,17 +160,17 @@ cli
           });
 
           await ctx.task('Write .env', async () => {
-            writeEnvFile(shopify.env, shopify.tunnel);
+            writeEnv(shopify.env, shopify.tunnel);
           });
         });
 
         await ctx.task('Build web', async () => {
-          await buildFrontend({ watch: true, apiKey: shopify.env.SHOPIFY_API_KEY });
+          await buildWeb({ watch: true, apiKey: shopify.env.SHOPIFY_API_KEY });
         });
 
         await ctx.task('Setup functions', async (ctx) => {
           await ctx.task('Build functions', async () => {
-            await buildBackend({ watch: true });
+            await buildFunctions({ watch: true });
           });
 
           await ctx.spawn('Install packages', 'npm', ['install'], {
@@ -197,7 +197,7 @@ cli
         });
 
         await ctx.task('Register app', async (ctx) => {
-          await updateShopifyConfig(shopify.tunnel, shopify.configPath);
+          await updateConfig(shopify.tunnel, shopify.configPath);
           await ctx.spawn('Deploy app config', 'shopify', [
             'app',
             'deploy',
@@ -236,7 +236,7 @@ cli
 
     await ctx.task('Select config', async () => {
       await ctx.task('Scan configs', async () => {
-        const result = await scanShopifyConfigs({ skipCache: true });
+        const result = await scanConfigs({ skipCache: true });
 
         if (result.configs.length === 0) {
           throw new Error('No Shopify config found. Try running: npm run link');
@@ -249,7 +249,7 @@ cli
 
       await ctx.task('Choose config', async (ctx) => {
         if (!shopify.configPath) {
-          const result = await scanShopifyConfigs({ skipCache: true });
+          const result = await scanConfigs({ skipCache: true });
           shopify.configPath = await ctx.select({
             message: 'Select Shopify config',
             choices: result.configs.map(c => ({
@@ -261,7 +261,7 @@ cli
       });
 
       await ctx.task('Validate config', async () => {
-        ensureAccessConfig(shopify.configPath);
+        ensureAccess(shopify.configPath);
       });
 
       await ctx.task('Done', (ctx) => {
@@ -272,7 +272,7 @@ cli
 
     await ctx.task('Deploy', async () => {
       await ctx.task('Load environment', async () => {
-        shopify.env = loadEnvironment(shopify.configPath);
+        shopify.env = loadEnv(shopify.configPath);
       });
 
       await ctx.task('Setup environment', async () => {
@@ -293,7 +293,7 @@ cli
         });
 
         await ctx.task('Write .env', async () => {
-          writeEnvFile(shopify.env);
+          writeEnv(shopify.env);
         });
       }, {
         skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
@@ -301,7 +301,7 @@ cli
 
       await ctx.parallel('Build production', async (ctx) => {
         await ctx.task('Build frontend', async () => {
-          await buildFrontend({
+          await buildWeb({
             watch: false,
             apiKey: shopify.env.SHOPIFY_API_KEY
           });
@@ -309,7 +309,7 @@ cli
 
         await ctx.task('Build backend', async (ctx) => {
           await ctx.task('Build functions', async () => {
-            await buildBackend({ watch: false });
+            await buildFunctions({ watch: false });
           });
 
           await ctx.spawn('Install production packages', 'npm', ['install', '--production'], {
@@ -364,14 +364,14 @@ cli
       });
 
       await ctx.task('Connect to production', async () => {
-        prepareEmulatorDataDir();
-        collections = await connectToFirestore(serviceAccountPath);
+        prepareDir();
+        collections = await connect(serviceAccountPath);
       });
 
       await ctx.parallel('Export collections', async (ctx) => {
         for (const collection of collections) {
           await ctx.task(collection.id, async () => {
-            await exportCollectionToFile(collection);
+            await exportCollection(collection);
           });
         }
       });
