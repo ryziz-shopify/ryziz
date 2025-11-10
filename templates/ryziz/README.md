@@ -46,30 +46,27 @@ All demo files are in `src/` and can be deleted when you're ready to build your 
 ### Demo Files You'll Get
 
 **Frontend Pages**
-- `app.index.jsx` - Welcome page with links to all demos
-- `app.demo.homepage.jsx` - Complete homepage layout
-- `app.demo.index.jsx` - Index table with data
-- `app.demo.details.jsx` - Details page with form
-- `app.demo.settings.jsx` - Settings page example
-- `app.demo.$pattern.jsx` - Pattern viewer (dynamic route)
-- `patterns/` - 15 reusable UI component examples
+- Welcome page with navigation to all demos
+- Complete page layouts (homepage, index table, details, settings)
+- Pattern viewer with dynamic routing
+- Reusable UI component examples (15+ patterns)
 
 **Backend APIs**
-- `api.index.js` - Simple API endpoint
-- `api.demo.js` - Demo API (can delete)
+- Simple API endpoint example
+- Demo API with Shopify GraphQL and Firestore integration
 
 **Webhooks**
-- `webhooks.app-uninstalled.js` - Cleanup on uninstall
-- `webhooks.customers-data-request.js` - GDPR data request
-- `webhooks.customers-redact.js` - GDPR customer redaction
-- `webhooks.shop-redact.js` - GDPR shop redaction
+- App lifecycle webhooks (uninstall)
+- GDPR compliance webhooks (data requests, redaction)
 
 **Cleanup Instructions**
 
-When ready to build, delete these files:
-- `app.demo.*.jsx` - All demo pages
-- `patterns/*.jsx` - All pattern files
+When ready to build your app, delete demo files:
+- `app.demo.*` files - Demo pages and patterns
 - `api.demo.js` - Demo API
+- `patterns/` directory - UI pattern examples
+
+Keep the GDPR webhooks and core structure files.
 
 ## Project Structure
 
