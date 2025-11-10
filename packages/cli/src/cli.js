@@ -80,8 +80,15 @@ class TaskContext {
   }
 
   spawn(title, command, args, options = {}) {
-    const { skip, enabled, ...spawnOptions } = options;
-    this.task(title, () => spawn(command, args, spawnOptions), { skip, enabled });
+    const { skip, enabled, onLine, ...spawnOptions } = options;
+
+    this.task(title, (task) => {
+      const defaultOnLine = onLine || ((line) => {
+        task.output = line;
+      });
+
+      return spawn(command, args, { ...spawnOptions, onLine: defaultOnLine });
+    }, { skip, enabled });
   }
 
   async select(options) {
