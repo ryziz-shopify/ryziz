@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/router",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "MIT",
   "main": "index.js",
   "jsconfig": "./jsconfig.base.json",
