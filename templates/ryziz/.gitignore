@@ -1,28 +1,6 @@
-# Build outputs
-.ryziz/
-
-# Dependencies
-node_modules/
-
-# Shopify CLI
-.shopify/
-
-# Firebase
 .firebase/
-.emulator-data/
-firebase-export-*/
-
-# Logs
-*.log
-*-debug*.log
-
-# OS files
+.ryziz/
+.shopify/
+node_modules/
 .DS_Store
-Thumbs.db
-*.swp
-*.swo
-
-# Editor configs
-.vscode/
-.idea/
-*.sublime-*
+*.log

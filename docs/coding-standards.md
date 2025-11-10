@@ -201,3 +201,18 @@ createTask('Dev', (task) => {
   }
 });
 ```
+
+## .gitignore Rules
+- No comments, no blank lines (minimal)
+- Folders first (with trailing slash), then files
+- Sort alphabetically within each group
+
+**Example:**
+```gitignore
+.firebase/
+.ryziz/
+.shopify/
+node_modules/
+.DS_Store
+*.log
+```
