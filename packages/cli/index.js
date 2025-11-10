@@ -28,7 +28,7 @@ cli
         await restoreDotfiles(process.cwd());
       });
 
-      ctx.task('Configure project', async () => {
+      ctx.task('Configure project', async (ctx) => {
         ctx.spawn('Clean package config', 'npm', ['pkg', 'delete', 'bin']);
         ctx.spawn('Set package name', 'npm', ['pkg', 'set', `name=${basename(process.cwd())}`]);
         ctx.spawn('Move CLI dependency', 'npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')']);
@@ -177,7 +177,7 @@ cli
           }
         });
 
-        ctx.task('Register app', async () => {
+        ctx.task('Register app', async (ctx) => {
           await updateConfig(shopify.tunnel, shopify.configPath);
           ctx.spawn('Deploy app config', 'shopify', [
             'app',
