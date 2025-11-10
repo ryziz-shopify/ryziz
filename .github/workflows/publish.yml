@@ -14,11 +14,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - run: |
-          # Auto-detect and publish all packages
+          # Publish packages
           for package_dir in packages/*; do
             if [ -d "$package_dir" ] && [ -f "$package_dir/package.json" ]; then
               if git diff HEAD~1 HEAD "$package_dir/package.json" | grep -q '^\+.*"version"'; then
@@ -28,14 +28,28 @@ jobs:
             fi
           done
 
-          # Ryziz template
-          if git diff HEAD~1 HEAD templates/ryziz/package.json | grep -q '^\+.*"version"'; then
-            echo "Publishing templates/ryziz..."
-            cd templates/ryziz
-            mv .gitignore gitignore
-            npm publish --access public
-            mv gitignore .gitignore
-            cd -
-          fi
+          # Publish templates (dynamic scan)
+          for template_dir in templates/*; do
+            if [ -d "$template_dir" ] && [ -f "$template_dir/package.json" ]; then
+              if git diff HEAD~1 HEAD "$template_dir/package.json" | grep -q '^\+.*"version"'; then
+                echo "Publishing $template_dir..."
+                cd "$template_dir"
+
+                # Rename .gitignore for publishing
+                if [ -f ".gitignore" ]; then
+                  mv .gitignore gitignore
+                fi
+
+                npm publish --access public
+
+                # Restore .gitignore
+                if [ -f "gitignore" ]; then
+                  mv gitignore .gitignore
+                fi
+
+                cd -
+              fi
+            fi
+          done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
