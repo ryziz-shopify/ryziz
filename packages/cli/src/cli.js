@@ -8,11 +8,12 @@ import { select, input } from '@inquirer/prompts';
 
 const activeProcesses = new Set();
 
-export { CLI, spawn };
+export const CLI = _CLI;
+export const spawn = _spawn;
 
 // Implementation
 
-class CLI {
+class _CLI {
   constructor(name, description, version) {
     this.program = new Command();
     this.program.name(name).description(description).version(version);
@@ -87,7 +88,7 @@ class TaskContext {
         task.output = line;
       });
 
-      return spawn(command, args, { ...spawnOptions, onLine: defaultOnLine });
+      return _spawn(command, args, { ...spawnOptions, onLine: defaultOnLine });
     }, { skip, enabled });
   }
 
@@ -105,7 +106,7 @@ class TaskContext {
   }
 }
 
-function spawn(command, args, options = {}) {
+function _spawn(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const { onLine, ...spawnOptions } = options;
     const [cmd, extraArgs] = _resolveCommand(command);

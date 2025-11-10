@@ -113,8 +113,9 @@
 Always organize files in this exact order:
 1. **Imports** - All import statements
 2. **Constants** - Module-level constants (const CACHE_PATH, const COMPLIANCE_TOPICS, etc.)
-3. **Exports** - All export statements (functions, classes, or variables)
-4. **Private helpers** - Non-exported helper functions
+3. **Exports** - All export statements only (no implementation)
+4. **Implementation comment** - `// Implementation` separator
+5. **Implementations** - Function/constant implementations with `_` prefix
 
 **Example:**
 ```js
@@ -126,19 +127,17 @@ import path from 'path';
 const CACHE_PATH = path.join(process.cwd(), '.ryziz/cache.json');
 
 // 3. Exports
-export async function connectToFirestore(path) {
-  const data = await readServiceAccount(path);
+export const connectToFirestore = _connectToFirestore;
+export const db = _lazyFirestore();
+
+// Implementation
+
+async function _connectToFirestore(path) {
+  const data = _readServiceAccount(path);
   return initializeApp(data);
 }
 
-export const db = lazyFirestore();
-
-// 4. Private helpers
-function readServiceAccount(path) {
-  return JSON.parse(fs.readFileSync(path, 'utf8'));
-}
-
-function lazyFirestore() {
+function _lazyFirestore() {
   let _db;
   return new Proxy({}, {
     get(_target, prop) {
@@ -147,21 +146,74 @@ function lazyFirestore() {
     }
   });
 }
+
+function _readServiceAccount(path) {
+  return JSON.parse(fs.readFileSync(path, 'utf8'));
+}
 ```
 
 **Why** - Read first few lines to know exactly what the file exports. No scrolling needed.
 
 ### Export Patterns
+
+**Standard Export Pattern:**
+
+All exports must follow this structure:
+1. **Exports at top** - All export statements together
+2. **Implementation comment** - `// Implementation` separator
+3. **Implementations below** - Functions/constants with `_` prefix
+
+```js
+// 1. Imports
+import fs from 'fs';
+import path from 'path';
+
+// 2. Constants (if any)
+const CACHE_PATH = '.ryziz/cache.json';
+
+// 3. Exports
+export const scanConfigs = _scanConfigs;
+export const saveCache = _saveCache;
+export const loadEnv = _loadEnv;
+
+// Implementation
+
+async function _scanConfigs(options = {}) {
+  // ... implementation
+}
+
+function _saveCache(configPath) {
+  // ... implementation
+}
+
+function _loadEnv(configPath) {
+  // ... implementation
+}
+```
+
+**Exceptions (keep as-is):**
+- `export default` - React components, pages
+  ```jsx
+  export default function HomePage() { ... }
+  ```
+- `export { ... } from '...'` - Re-exports from other modules
+  ```js
+  export { useNavigate, Link } from 'react-router-dom';
+  ```
+- `export const metadata = { ... }` - Static metadata objects
+  ```js
+  export const metadata = { title: 'Home', description: '...' };
+  ```
+- `export const TOPIC = 'STRING'` - String/simple constants
+  ```js
+  export const TOPIC = 'CUSTOMERS_DATA_REQUEST';
+  ```
+
 **For lazy initialization or complex setup:**
 - ❌ Don't: `let _db; export const db = new Proxy(...)`
-- ✅ Do: `export const db = lazyFirestore();` then define `function lazyFirestore()` below
+- ✅ Do: `export const db = _lazyFirestore();` then define `function _lazyFirestore()` below
 
-**Reason** - Exports stay at top, implementation details in helper functions below
-
-### Function Organization
-- Main/exported functions at top
-- Helper functions below in order of usage
-- Hoisting style for readability
+**Reason** - Read file top to see all exports. Implementation details stay below separator.
 
 ## Source of Trust
 - Main entry point (index.js) handles validation and errors

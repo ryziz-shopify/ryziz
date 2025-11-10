@@ -1,6 +1,9 @@
 export const TOPIC = 'CUSTOMERS_DATA_REQUEST';
+export const handle = _handle;
 
-export async function handle(topic, shop, body) {
+// Implementation
+
+async function _handle(topic, shop, body) {
   const data = JSON.parse(body);
   console.log('Customer data request:', { shop, customerId: data.customer?.id });
 

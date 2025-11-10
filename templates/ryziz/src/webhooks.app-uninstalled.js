@@ -1,5 +1,8 @@
 export const TOPIC = 'APP_UNINSTALLED';
+export const handle = _handle;
 
-export async function handle(topic, shop, body) {
+// Implementation
+
+async function _handle(topic, shop, body) {
   console.log('App uninstalled:', { topic, shop, body });
 }

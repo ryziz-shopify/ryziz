@@ -1,7 +1,12 @@
 import { db, withShopify } from '@ryziz-shopify/functions';
 
+export const GET = _GET;
+export const POST = _POST;
+
+// Implementation
+
 // GET endpoint - fetch store name from Shopify GraphQL and counter from Firestore
-export const GET = withShopify(async (req, res) => {
+const _GET = withShopify(async (req, res) => {
   try {
     // Query Shopify GraphQL for shop name
     const shopData = await req.shopify.graphql(`
@@ -27,7 +32,7 @@ export const GET = withShopify(async (req, res) => {
 });
 
 // POST endpoint - update counter in Firestore using transaction
-export const POST = async (req, res) => {
+const _POST = async (req, res) => {
   try {
     const { action } = req.body;
 
