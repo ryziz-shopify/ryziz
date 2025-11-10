@@ -110,7 +110,12 @@ cli
               '--config',
               shopify.configPath
             ], {
-              onLine(line, { resolve }) {
+              onLine(line, { resolve, reject }) {
+                if (line.includes('No app with client ID')) {
+                  reject(new Error("Shopify authentication failed. Please run 'npm run link' to configure your app or contact the organization owner to grant access."));
+                  return;
+                }
+
                 const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
                 if (match) {
                   shopify.env.SHOPIFY_API_SECRET = match[1].trim();
@@ -265,7 +270,12 @@ cli
             '--config',
             shopify.configPath
           ], {
-            onLine(line, { resolve }) {
+            onLine(line, { resolve, reject }) {
+              if (line.includes('No app with client ID')) {
+                reject(new Error("Shopify authentication failed. Please run 'npm run link' to configure your app or contact the organization owner to grant access."));
+                return;
+              }
+
               const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
               if (match) {
                 shopify.env.SHOPIFY_API_SECRET = match[1].trim();
