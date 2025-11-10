@@ -1,115 +1,111 @@
 # Ryziz
 
-Framework for building Shopify embedded apps on Firebase with file-based routing.
+Build Shopify apps on Firebase with file-based routing.
 
 ## Quick Start
 
 ```bash
-# Initialize new project
-npx @ryziz-shopify/ryziz@latest init
-
-# Link to your Shopify Partner app
-npm run link
-
-# Start development server
-npm run dev
-
-# Deploy to production
-npm run deploy
+npx @ryziz-shopify/ryziz@latest init  # Create new project
+npm run link                           # Link to your Shopify app
+npm run dev                            # Start development server
+npm run deploy                         # Deploy to production
 ```
 
-Development server starts on localhost with Firebase emulators and Cloudflare tunnel for HTTPS.
-
-## What You Get
-
-When you run `npm run dev`, you'll have a fully working Shopify app with example files:
-
-### Frontend Pages (src/)
-
-- **page.index.jsx** - Public landing page
-- **app.index.jsx** - Dashboard with App Bridge demos
-- **app.components.jsx** - Polaris component showcase
-- **app.items.jsx** - CRUD list page with Firestore
-- **app.items.$id.jsx** - Dynamic detail/edit page
-- **app.settings.general.jsx** - Settings page (nested route)
-
-### Backend APIs (src/)
-
-- **api.index.js** - Example API with Shopify GraphQL
-- **api.items.js** - CRUD endpoints (GET, POST)
-- **api.items.$id.js** - Dynamic endpoints (GET, PUT, DELETE)
-
-### Webhooks (src/)
-
-- **webhooks.app-uninstalled.js** - Cleanup on app uninstall
-- **webhooks.customers-data-request.js** - GDPR data request
-- **webhooks.customers-redact.js** - GDPR customer redaction
-- **webhooks.shop-redact.js** - GDPR shop redaction
-
-All examples demonstrate real-world patterns and best practices.
+Development server runs on localhost with Firebase emulators and Cloudflare tunnel for HTTPS.
 
 ## File-Based Routing
 
-**page.*.jsx** - Public routes (no auth)
+Name your files, get your routes:
+
+**Frontend**
 ```
-page.index.jsx → /
-page.about.jsx → /about
+page.index.jsx              → /                 (public page)
+page.about.jsx              → /about            (public page)
+app.index.jsx               → /app              (embedded app)
+app.settings.jsx            → /app/settings     (embedded app)
+app.items.$id.jsx           → /app/items/:id    (dynamic route)
 ```
 
-**app.*.jsx** - Embedded app routes (Shopify Admin)
+**Backend**
 ```
-app.index.jsx → /app
-app.items.jsx → /app/items
-app.items.$id.jsx → /app/items/:id
-app.settings.general.jsx → /app/settings/general
-```
-
-**api.*.js** - API endpoints
-```
-api.items.js → /api/items
-api.items.$id.js → /api/items/:id
+api.hello.js                → /api/hello        (API endpoint)
+api.items.$id.js            → /api/items/:id    (dynamic API)
+webhooks.orders-create.js   → auto-registered   (webhook handler)
 ```
 
-**webhooks.*.js** - Webhook handlers (auto-registered)
-```
-webhooks.orders-create.js → ORDERS_CREATE webhook
-```
+## Explore Demo
+
+Run `npm run dev` to see working examples:
+
+- **Full page layouts** - Homepage, index table, details page, settings
+- **15+ UI patterns** - Polaris components ready to copy
+- **Live code** - See routing, App Bridge, and Firestore in action
+
+All demo files are in `src/` and can be deleted when you're ready to build your app.
+
+### Demo Files You'll Get
+
+**Frontend Pages**
+- `app.index.jsx` - Welcome page with links to all demos
+- `app.demo.homepage.jsx` - Complete homepage layout
+- `app.demo.index.jsx` - Index table with data
+- `app.demo.details.jsx` - Details page with form
+- `app.demo.settings.jsx` - Settings page example
+- `app.demo.$pattern.jsx` - Pattern viewer (dynamic route)
+- `patterns/` - 15 reusable UI component examples
+
+**Backend APIs**
+- `api.index.js` - Simple API endpoint
+- `api.demo.js` - Demo API (can delete)
+
+**Webhooks**
+- `webhooks.app-uninstalled.js` - Cleanup on uninstall
+- `webhooks.customers-data-request.js` - GDPR data request
+- `webhooks.customers-redact.js` - GDPR customer redaction
+- `webhooks.shop-redact.js` - GDPR shop redaction
+
+**Cleanup Instructions**
+
+When ready to build, delete these files:
+- `app.demo.*.jsx` - All demo pages
+- `patterns/*.jsx` - All pattern files
+- `api.demo.js` - Demo API
 
 ## Project Structure
 
 ```
-src/               Example files (routes, APIs, webhooks)
-public/            Static assets and HTML templates
-shopify.app.toml   Shopify app configuration
-.firebaserc        Firebase project ID
+src/                 Your route files (pages, APIs, webhooks)
+public/              Static assets and HTML templates
+shopify.app.toml     Shopify app config
+.firebaserc          Firebase project ID
 ```
-
-## Learning from Examples
-
-Explore `src/` files to see:
-- Polaris Web Components usage
-- App Bridge API integration
-- Firestore database operations
-- Form handling and validation
-- Dynamic routing patterns
-- Shopify GraphQL queries
-
-All examples include inline comments explaining key patterns.
-
-## Commands
-
-**npm run dev** - Start development with hot reload
-
-**npm run link** - Link to Shopify Partner app
-
-**npm run deploy** - Deploy to Firebase + Shopify
 
 ## Features
 
-- **File-based routing** - Convention over configuration
-- **Shopify OAuth** - Automatic authentication
-- **App Bridge** - Full API access
-- **Polaris Components** - TypeScript autocomplete
-- **Firebase** - Functions, Hosting, Firestore
-- **Hot reload** - Fast development
+- **File-based routing** - Name your file, get your route
+- **Shopify OAuth** - Authentication handled for you
+- **App Bridge** - Full Shopify Admin API access
+- **Polaris Components** - TypeScript autocomplete built-in
+- **Firebase** - Functions, Hosting, Firestore included
+- **Hot reload** - See changes instantly
 - **Zero config** - Works out of the box
+
+## Commands
+
+**npm run dev** - Start dev server with hot reload
+
+**npm run link** - Connect to your Shopify Partner app
+
+**npm run deploy** - Deploy to Firebase and Shopify
+
+## Learn More
+
+All example files include comments showing:
+- How to use Polaris Web Components
+- How to call App Bridge APIs
+- How to read/write Firestore data
+- How to handle forms
+- How to create dynamic routes
+- How to query Shopify GraphQL
+
+Start exploring `src/` after running `npm run dev`.

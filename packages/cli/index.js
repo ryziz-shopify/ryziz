@@ -100,10 +100,10 @@ cli
         shopify.env = loadEnv(shopify.configPath);
       });
 
-      ctx.parallel('Build', async (ctx) => {
-        ctx.task('Setup environment', async (ctx) => {
-          ctx.parallel('Fetch secrets', async (ctx) => {
-            ctx.spawn('Load API secret', 'shopify', [
+      ctx.parallel('Build development', async (ctx) => {
+        ctx.task('Prepare runtime environment', async (ctx) => {
+          ctx.parallel('Fetch credentials', async (ctx) => {
+            ctx.spawn('Fetch API secret', 'shopify', [
               'app',
               'env',
               'show',
@@ -139,13 +139,9 @@ cli
               }
             });
           });
-
-          ctx.task('Write .env', async () => {
-            writeEnv(shopify.env, shopify.tunnel);
-          });
         });
 
-        ctx.task('Build web', async () => {
+        ctx.task('Build frontend', async () => {
           await buildWeb({ watch: true, apiKey: shopify.env.SHOPIFY_API_KEY });
         });
 
@@ -158,6 +154,10 @@ cli
             cwd: '.ryziz/functions'
           });
         });
+      });
+
+      ctx.task('Write .env file', async () => {
+        writeEnv(shopify.env, shopify.tunnel);
       });
 
       ctx.parallel('Start', async (ctx) => {
@@ -256,31 +256,25 @@ cli
         shopify.env = loadEnv(shopify.configPath);
       });
 
-      ctx.task('Setup environment', async (ctx) => {
-        ctx.spawn('Fetch API secret', 'shopify', [
-          'app',
-          'env',
-          'show',
-          '--config',
-          shopify.configPath
-        ], {
-          onLine(line, { resolve }) {
-            const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
-            if (match) {
-              shopify.env.SHOPIFY_API_SECRET = match[1].trim();
-              resolve();
-            }
-          }
-        });
-
-        ctx.task('Write .env', async () => {
-          writeEnv(shopify.env);
-        });
-      }, {
-        skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
-      });
-
       ctx.parallel('Build production', async (ctx) => {
+        ctx.task('Prepare runtime environment', async (ctx) => {
+          ctx.spawn('Fetch API secret', 'shopify', [
+            'app',
+            'env',
+            'show',
+            '--config',
+            shopify.configPath
+          ], {
+            onLine(line, { resolve }) {
+              const match = line.match(/SHOPIFY_API_SECRET=(.+)/);
+              if (match) {
+                shopify.env.SHOPIFY_API_SECRET = match[1].trim();
+                resolve();
+              }
+            }
+          });
+        });
+
         ctx.task('Build frontend', async () => {
           await buildWeb({
             watch: false,
@@ -293,10 +287,16 @@ cli
             await buildFunctions({ watch: false });
           });
 
-          ctx.spawn('Install production packages', 'npm', ['install', '--production'], {
+          ctx.spawn('Install packages', 'npm', ['install', '--production'], {
             cwd: '.ryziz/functions'
           });
         });
+      }, {
+        skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
+      });
+
+      ctx.task('Write .env file', async () => {
+        writeEnv(shopify.env);
       }, {
         skip: (ctx) => shopifyOnly ? 'Skipped (--shopify-only)' : false
       });
