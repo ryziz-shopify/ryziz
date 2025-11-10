@@ -466,7 +466,7 @@ async function _scanApiFiles() {
 
 function _apiFilenameToRoute(filename) {
   const name = filename.replace('api.', '').replace('.js', '');
-  if (name === 'index') return '/api';
+  if (name === 'index') return '/api/';
 
   return '/api/' + name.split('.').map(segment =>
     segment.startsWith('$') ? ':' + segment.slice(1) : segment
