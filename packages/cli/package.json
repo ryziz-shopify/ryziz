@@ -1,6 +1,6 @@
 {
   "name": "@ryziz-shopify/cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "dependencies": {
     "@inquirer/prompts": "^7.9.0",

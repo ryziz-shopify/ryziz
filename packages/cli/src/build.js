@@ -142,7 +142,7 @@ async function _buildWeb(options = {}) {
     plugins: [
       _reactShimPlugin(),
       _cleanDistPlugin(outdir),
-      _virtualRoutesPlugin(),
+      _virtualPageRoutesPlugin(),
       _copyPublicPlugin(outdir),
       _injectApiKeyPlugin(outdir, apiKey)
     ]
@@ -180,7 +180,7 @@ async function _buildFunctions(options = {}) {
     },
     plugins: [
       _cleanDistPlugin(outdir),
-      _virtualRoutesPlugin(),
+      _virtualApiRoutesPlugin(),
       _virtualWebhooksPlugin(),
       _generatePackageJsonPlugin(outdir, functionsPackage),
       _copyFirebaseConfigPlugin()
@@ -239,9 +239,9 @@ function _cleanDistPlugin(outdir) {
   };
 }
 
-function _virtualRoutesPlugin() {
+function _virtualPageRoutesPlugin() {
   return {
-    name: 'virtual-routes',
+    name: 'virtual-page-routes',
     setup(build) {
       build.onResolve({ filter: /^virtual:routes$/ }, args => {
         return {
@@ -254,6 +254,31 @@ function _virtualRoutesPlugin() {
         const routes = await _scanPageFiles();
         return {
           contents: _generateRoutesConfig(routes),
+          loader: 'js',
+          resolveDir: process.cwd(),
+          watchFiles: routes.map(r => r.file),
+          watchDirs: [path.join(process.cwd(), 'src')]
+        };
+      });
+    }
+  };
+}
+
+function _virtualApiRoutesPlugin() {
+  return {
+    name: 'virtual-api-routes',
+    setup(build) {
+      build.onResolve({ filter: /^virtual:routes$/ }, args => {
+        return {
+          path: args.path,
+          namespace: 'virtual-routes'
+        };
+      });
+
+      build.onLoad({ filter: /.*/, namespace: 'virtual-routes' }, async () => {
+        const routes = await _scanApiFiles();
+        return {
+          contents: _generateApiRoutesConfig(routes),
           loader: 'js',
           resolveDir: process.cwd(),
           watchFiles: routes.map(r => r.file),
@@ -421,6 +446,40 @@ function _generateRoutesConfig(routes) {
 
   const array = routes.map((r, i) =>
     `  { path: '${r.path}', component: Page${i} }`
+  ).join(',\n');
+
+  return `${imports}\n\nexport default [\n${array}\n];\n`;
+}
+
+async function _scanApiFiles() {
+  const pattern = path.join(process.cwd(), 'src/api.*.js');
+  const files = await glob(pattern);
+
+  return files.map(file => {
+    const filename = path.basename(file);
+    const routePath = _apiFilenameToRoute(filename);
+    const absolutePath = path.resolve(file);
+
+    return { path: routePath, file: absolutePath };
+  });
+}
+
+function _apiFilenameToRoute(filename) {
+  const name = filename.replace('api.', '').replace('.js', '');
+  if (name === 'index') return '/api';
+
+  return '/api/' + name.split('.').map(segment =>
+    segment.startsWith('$') ? ':' + segment.slice(1) : segment
+  ).join('/');
+}
+
+function _generateApiRoutesConfig(routes) {
+  const imports = routes.map((r, i) =>
+    `import * as apiModule${i} from '${r.file}';`
+  ).join('\n');
+
+  const array = routes.map((r, i) =>
+    `  { path: '${r.path}', module: apiModule${i} }`
   ).join(',\n');
 
   return `${imports}\n\nexport default [\n${array}\n];\n`;
