@@ -3,7 +3,7 @@
 import './patches.js';
 
 import { CLI, spawn } from './src/cli.js';
-import { scanTemplate, copy, restoreDotfiles } from './src/init.js';
+import { copyTemplate } from './src/init.js';
 import { scanConfigs, saveCache, ensureAccess, loadEnv, writeEnv, updateConfig, buildWeb, buildFunctions } from './src/build.js';
 import { connect, prepareDir, exportCollection } from './src/pull.js';
 import { basename } from 'path';
@@ -15,17 +15,8 @@ cli
   .command('init', 'Initialize a new Ryziz project')
   .action(async (options, ctx) => {
     ctx.task('Init', async (ctx) => {
-      ctx.parallel('Copy files to project', async (ctx) => {
-        const files = await scanTemplate();
-        for (const file of files) {
-          ctx.task(basename(file), async () => {
-            await copy(file, process.cwd());
-          });
-        }
-      });
-
-      ctx.task('Restore dotfiles', async () => {
-        await restoreDotfiles(process.cwd());
+      ctx.task('Copy template files', async () => {
+        await copyTemplate(process.cwd());
       });
 
       ctx.task('Configure project', async (ctx) => {

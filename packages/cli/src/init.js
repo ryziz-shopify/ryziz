@@ -2,11 +2,17 @@ import { readdirSync, existsSync } from 'fs';
 import { stat, cp, copyFile, rename } from 'fs/promises';
 import { join, basename } from 'path';
 
-export const scanTemplate = _scanTemplate;
-export const copy = _copy;
-export const restoreDotfiles = _restoreDotfiles;
+export const copyTemplate = _copyTemplate;
 
 // Implementation
+
+async function _copyTemplate(targetDir) {
+  const files = await _scanTemplate();
+  for (const file of files) {
+    await _copy(file, targetDir);
+  }
+  await _restoreDotfiles(targetDir);
+}
 
 async function _scanTemplate() {
   const module = await import('module');
