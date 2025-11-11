@@ -22,7 +22,7 @@ cli
       ctx.task('Configure project', async (ctx) => {
         ctx.spawn('Clean package config', 'npm', ['pkg', 'delete', 'bin']);
         ctx.spawn('Set package name', 'npm', ['pkg', 'set', `name=${basename(process.cwd())}`]);
-        ctx.spawn('Move CLI dependency', 'npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')']);
+        ctx.spawn('Move CLI dependency', 'npm', ['pkg', 'set', 'devDependencies.@ryziz-shopify/cli=$(npm pkg get dependencies.@ryziz-shopify/cli | tr -d \'"\')'], { shell: true });
         ctx.spawn('Delete CLI from dependencies', 'npm', ['pkg', 'delete', 'dependencies.@ryziz-shopify/cli']);
       });
 
