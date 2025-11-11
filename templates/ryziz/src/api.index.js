@@ -1,7 +1,3 @@
-export const GET = _GET;
-
-// Implementation
-
-function _GET(req, res) {
+export const GET = async (req, res) => {
   res.json({ message: 'hello world' });
 }

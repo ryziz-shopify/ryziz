@@ -8,12 +8,12 @@ import { select, input } from '@inquirer/prompts';
 
 const activeProcesses = new Set();
 
-export const CLI = _CLI;
+export { CLI };
 export const spawn = _spawn;
 
 // Implementation
 
-class _CLI {
+class CLI {
   constructor(name, description, version) {
     this.program = new Command();
     this.program.name(name).description(description).version(version);

@@ -510,7 +510,7 @@ function _generateWebhooksConfig(webhooks) {
     `  [webhook${i}.TOPIC]: {
     deliveryMethod: 'http',
     callbackUrl: '/webhook',
-    callback: webhook${i}.handle
+    callback: webhook${i}.default
   }`
   ).join(',\n');
 

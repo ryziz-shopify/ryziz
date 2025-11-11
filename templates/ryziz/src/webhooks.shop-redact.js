@@ -1,9 +1,6 @@
 export const TOPIC = 'SHOP_REDACT';
-export const handle = _handle;
 
-// Implementation
-
-async function _handle(topic, shop, body) {
+export default async function handle(topic, shop, body) {
   const data = JSON.parse(body);
   console.log('Shop redact request:', { shop, shopId: data.shop_id });
 
