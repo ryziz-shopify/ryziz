@@ -8,9 +8,9 @@ import webhookHandlers from 'virtual:webhooks';
 
 initializeApp();
 
-export const auth = onRequest({ invoker: "public" }, _createAuthApp());
-export const webhooks = onRequest({ invoker: "public" }, _createWebhooksApp());
-export const api = onRequest({ invoker: "public" }, _createApiApp());
+export const auth = onRequest({ invoker: 'public', memory: '512MiB' }, _createAuthApp());
+export const webhooks = onRequest({ invoker: 'public', memory: '512MiB' }, _createWebhooksApp());
+export const api = onRequest({ invoker: 'public', memory: '512MiB' }, _createApiApp());
 
 // Implementation
 
@@ -46,6 +46,17 @@ function _createAuthApp() {
 
 function _createWebhooksApp() {
   const app = express();
+
+  // Firebase Functions v2 automatically parses body as JSON
+  // We need to restore rawBody for Shopify HMAC verification
+  app.use((req, res, next) => {
+    if (req.rawBody) {
+      // Firebase provides rawBody - use it for Shopify verification
+      req.body = req.rawBody;
+    }
+    next();
+  });
+
   app.post(shopify.config.webhooks.path, shopify.processWebhooks({ webhookHandlers }));
   return app;
 }
